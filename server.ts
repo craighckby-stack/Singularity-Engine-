@@ -54,12 +54,12 @@ interface SingularityStepRequest {
 }
 
 // API Endpoints
-app.get('/api/health', (req: Request, res: Response) => {
+app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', time: new Date().toISOString(), hasApiKey: Boolean(getApiKey()) });
 });
 
 // High Thinking Deep Reasoning Endpoint
-app.post('/api/singularity-think', async (req: Request<{}, {}, SingularityThinkRequest>, res: Response) => {
+app.post('/api/singularity-think', async (req: Request<unknown, unknown, SingularityThinkRequest>, res: Response): Promise<void> => {
   try {
     const { prompt, systemContext } = req.body;
     if (!prompt) {
@@ -74,7 +74,7 @@ app.post('/api/singularity-think', async (req: Request<{}, {}, SingularityThinkR
 
     let text = '';
     let thinkingProcess = '';
-    let modelUsed = 'gemini-3.8-flash';
+    const modelUsed = 'gemini-3.8-flash';
 
     if (ai) {
       try {
@@ -101,7 +101,6 @@ app.post('/api/singularity-think', async (req: Request<{}, {}, SingularityThinkR
         const errorMsg = err1 instanceof Error ? err1.message : String(err1);
         console.warn('gemini-3.8-flash call failed, trying gemini-3.1-pro-preview:', errorMsg);
         try {
-          modelUsed = 'gemini-3.1-pro-preview';
           const proRes = await ai.models.generateContent({
             model: 'gemini-3.1-pro-preview',
             contents: fullPrompt,
@@ -153,7 +152,7 @@ app.post('/api/singularity-think', async (req: Request<{}, {}, SingularityThinkR
 });
 
 // Iterative Loop Step Endpoint
-app.post('/api/singularity-step', async (req: Request<{}, {}, SingularityStepRequest>, res: Response) => {
+app.post('/api/singularity-step', async (req: Request<unknown, unknown, SingularityStepRequest>, res: Response): Promise<void> => {
   try {
     const { currentState, activePrompt } = req.body;
     const ai = getAIClient();
@@ -296,7 +295,7 @@ const setupServer = async (): Promise<void> => {
       appType: 'custom',
     });
     app.use(vite.middlewares);
-    app.use('*', async (req: Request, res: Response, next: NextFunction) => {
+    app.use('*', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
         const url = req.originalUrl;
         if (url.startsWith('/api/')) {
