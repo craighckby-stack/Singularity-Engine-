@@ -62,14 +62,14 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
   const [, startTransition] = useTransition();
 
   const handleQueryChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>): void => {
-    const value: string = e.target.value;
+    const value: string = e.target.value ?? '';
     if (value.length <= MAX_QUERY_LENGTH) {
       setQuery(value);
     }
   }, []);
 
   const handleContextChange = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
-    const value: string = e.target.value;
+    const value: string = e.target.value ?? '';
     if (value.length <= MAX_CONTEXT_LENGTH) {
       setSystemContext(value);
     }
@@ -77,7 +77,7 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
 
   const handleSubmit = useCallback(async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-    const trimmedQuery: string = query.trim();
+    const trimmedQuery: string = typeof query === 'string' ? query.trim() : '';
     if (!trimmedQuery || isProcessing) return;
 
     if (trimmedQuery.length > MAX_QUERY_LENGTH) {
@@ -85,7 +85,7 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
       return;
     }
 
-    const trimmedContext: string = systemContext.trim();
+    const trimmedContext: string = typeof systemContext === 'string' ? systemContext.trim() : '';
     if (trimmedContext.length > MAX_CONTEXT_LENGTH) {
       setErrorText(`System context exceeds maximum allowed length of ${MAX_CONTEXT_LENGTH} characters.`);
       return;
