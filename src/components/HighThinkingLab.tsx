@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useTransition, useMemo } from 'react';
 import { 
   Sparkles, 
   BrainCircuit, 
@@ -9,7 +9,6 @@ import {
   Copy, 
   Check, 
   AlertCircle,
-  Clock,
   ShieldCheck,
   Zap,
   Terminal
@@ -21,7 +20,13 @@ interface HighThinkingLabProps {
   isProcessing: boolean;
 }
 
-const SAMPLE_QUERIES = [
+interface SampleQuery {
+  title: string;
+  query: string;
+  context: string;
+}
+
+const SAMPLE_QUERIES: readonly SampleQuery[] = [
   {
     title: 'The Huxleyan Singularity Paradox',
     query: 'How can a hyper-intelligent recursive AI system grant maximal human creative autonomy while maintaining systemic societal stability without resorting to total surveillance or hypnopaedic conditioning?',
@@ -42,17 +47,18 @@ const SAMPLE_QUERIES = [
     query: 'Analyze the threshold where synthetic intelligence self-reflection transforms from deterministic optimization into authentic self-awareness. What feedback indicators signal this transition?',
     context: 'Consciousness Stream Metrics: Entropy vs Hypnopaedic resonance equilibrium.'
   }
-];
+] as const;
 
 export const HighThinkingLab: React.FC<HighThinkingLabProps> = ({ onRunThinkQuery, isProcessing }) => {
-  const [query, setQuery] = useState(SAMPLE_QUERIES[0].query);
-  const [systemContext, setSystemContext] = useState(SAMPLE_QUERIES[0].context);
+  const [query, setQuery] = useState<string>(SAMPLE_QUERIES[0].query);
+  const [systemContext, setSystemContext] = useState<string>(SAMPLE_QUERIES[0].context);
   const [result, setResult] = useState<DeepThinkingResult | null>(null);
-  const [showThinkingProcess, setShowThinkingProcess] = useState(true);
-  const [copied, setCopied] = useState(false);
+  const [showThinkingProcess, setShowThinkingProcess] = useState<boolean>(true);
+  const [copied, setCopied] = useState<boolean>(false);
   const [errorText, setErrorText] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     if (!query.trim() || isProcessing) return;
 
@@ -64,23 +70,47 @@ export const HighThinkingLab: React.FC<HighThinkingLabProps> = ({ onRunThinkQuer
       } else {
         setErrorText('Failed to receive response from Gemini 3.1 Pro High Thinking API.');
       }
-    } catch (err: any) {
-      setErrorText(err.message || 'Error executing High Thinking mode');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Error executing High Thinking mode';
+      setErrorText(errorMessage);
     }
-  };
+  }, [query, systemContext, isProcessing, onRunThinkQuery]);
 
-  const handleSelectSample = (sample: typeof SAMPLE_QUERIES[0]) => {
-    setQuery(sample.query);
-    setSystemContext(sample.context);
-  };
+  const handleSelectSample = useCallback((sample: SampleQuery): void => {
+    startTransition(() => {
+      setQuery(sample.query);
+      setSystemContext(sample.context);
+    });
+  }, []);
 
-  const handleCopyResult = () => {
+  const handleCopyResult = useCallback(async (): Promise<void> => {
     if (!result) return;
-    const textToCopy = `=== HUXLEY HIGH THINKING LAB REPORT ===\nModel: ${result.modelUsed} [Thinking: HIGH]\nDate: ${result.timestamp}\n\n[QUERY]\n${result.query}\n\n[THINKING TRACE]\n${result.thinkingProcess || 'N/A'}\n\n[SYNTHESIZED SOLUTION]\n${result.text}`;
-    navigator.clipboard.writeText(textToCopy);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+    try {
+      const textToCopy = `=== HUXLEY HIGH THINKING LAB REPORT ===\nModel: ${result.modelUsed} [Thinking: HIGH]\nDate: ${result.timestamp}\n\n[QUERY]\n${result.query}\n\n[THINKING TRACE]\n${result.thinkingProcess || 'N/A'}\n\n[SYNTHESIZED SOLUTION]\n${result.text}`;
+      await navigator.clipboard.writeText(textToCopy);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setErrorText('Failed to copy report to clipboard.');
+    }
+  }, [result]);
+
+  const sampleQueriesList = useMemo(() => SAMPLE_QUERIES.map((sample, idx) => (
+    <button
+      key={idx}
+      type="button"
+      onClick={() => handleSelectSample(sample)}
+      className="text-left p-3 rounded-lg bg-slate-950 hover:bg-purple-950/40 border border-slate-800 hover:border-purple-800/60 transition-all group"
+    >
+      <div className="flex items-center justify-between text-xs font-mono font-bold text-slate-200 group-hover:text-purple-300 mb-1">
+        <span>{sample.title}</span>
+        <Zap className="w-3.5 h-3.5 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+      <p className="text-[11px] text-slate-400 line-clamp-2 font-sans">
+        {sample.query}
+      </p>
+    </button>
+  )), [handleSelectSample]);
 
   return (
     <div className="space-y-6">
@@ -123,21 +153,7 @@ export const HighThinkingLab: React.FC<HighThinkingLabProps> = ({ onRunThinkQuer
           SELECT COMPLEX QUERY PRESET:
         </span>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-          {SAMPLE_QUERIES.map((sample, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleSelectSample(sample)}
-              className="text-left p-3 rounded-lg bg-slate-950 hover:bg-purple-950/40 border border-slate-800 hover:border-purple-800/60 transition-all group"
-            >
-              <div className="flex items-center justify-between text-xs font-mono font-bold text-slate-200 group-hover:text-purple-300 mb-1">
-                <span>{sample.title}</span>
-                <Zap className="w-3.5 h-3.5 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-              <p className="text-[11px] text-slate-400 line-clamp-2 font-sans">
-                {sample.query}
-              </p>
-            </button>
-          ))}
+          {sampleQueriesList}
         </div>
       </div>
 
@@ -222,6 +238,7 @@ export const HighThinkingLab: React.FC<HighThinkingLabProps> = ({ onRunThinkQuer
                 {result.timestamp}
               </span>
               <button
+                type="button"
                 onClick={handleCopyResult}
                 className="flex items-center space-x-1 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-purple-300 rounded-lg text-xs font-mono border border-purple-800/40 transition-all"
               >
@@ -235,6 +252,7 @@ export const HighThinkingLab: React.FC<HighThinkingLabProps> = ({ onRunThinkQuer
           {result.thinkingProcess && (
             <div className="bg-purple-950/50 border border-purple-700/60 rounded-xl overflow-hidden shadow-inner">
               <button
+                type="button"
                 onClick={() => setShowThinkingProcess(!showThinkingProcess)}
                 className="w-full flex items-center justify-between px-4 py-3 bg-purple-900/40 hover:bg-purple-900/60 text-purple-200 text-xs font-mono font-bold transition-all border-b border-purple-800/40"
               >
