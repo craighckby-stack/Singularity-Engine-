@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { StepLogEntry } from '../types/singularity';
 import { 
   FileText, 
@@ -19,26 +19,46 @@ interface LogStreamProps {
 }
 
 export const LogStream: React.FC<LogStreamProps> = ({ logs, onClearLogs }) => {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<boolean>(false);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(logs[0]?.id || null);
 
-  const handleCopyLogs = () => {
-    const jsonStr = JSON.stringify(logs, null, 2);
-    navigator.clipboard.writeText(jsonStr);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const serializedLogs = useMemo(() => {
+    try {
+      return JSON.stringify(logs, null, 2);
+    } catch {
+      return '[]';
+    }
+  }, [logs]);
 
-  const handleDownloadLogs = () => {
-    const jsonStr = JSON.stringify(logs, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `huxley_singularity_session_${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const handleCopyLogs = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(serializedLogs);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy logs to clipboard:', err);
+    }
+  }, [serializedLogs]);
+
+  const handleDownloadLogs = useCallback(() => {
+    try {
+      const blob = new Blob([serializedLogs], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `huxley_singularity_session_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download logs:', err);
+    }
+  }, [serializedLogs]);
+
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedLogId((prev) => (prev === id ? null : id));
+  }, []);
 
   return (
     <div className="space-y-5">
@@ -105,7 +125,7 @@ export const LogStream: React.FC<LogStreamProps> = ({ logs, onClearLogs }) => {
               >
                 {/* Log Item Bar */}
                 <button
-                  onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
+                  onClick={() => toggleExpand(log.id)}
                   className="w-full flex items-center justify-between p-4 bg-slate-950/60 hover:bg-slate-900 text-left transition-colors font-mono text-xs"
                 >
                   <div className="flex items-center space-x-3">
