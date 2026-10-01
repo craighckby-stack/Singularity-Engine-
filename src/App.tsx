@@ -24,7 +24,7 @@ const NODE_ORDER: readonly NodeId[] = [
   'mutation'
 ];
 
-export default function App() {
+export default function App(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<'loop' | 'thinking_lab' | 'scenarios' | 'logs'>('loop');
   
   const [state, setState] = useState<SingularityState>({
@@ -59,19 +59,41 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const autoLoopTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Updates state fields safely
+  // Updates state fields safely with explicit validation bounds
   const handleUpdateState = useCallback((updates: Partial<SingularityState>) => {
-    setState((prev) => ({ ...prev, ...updates }));
+    setState((prev) => {
+      const sanitizedUpdates: Partial<SingularityState> = { ...updates };
+      if (sanitizedUpdates.singularityIndex !== undefined) {
+        sanitizedUpdates.singularityIndex = Math.min(100, Math.max(0, sanitizedUpdates.singularityIndex));
+      }
+      if (sanitizedUpdates.entropyRate !== undefined) {
+        sanitizedUpdates.entropyRate = Math.min(1.0, Math.max(0.0, sanitizedUpdates.entropyRate));
+      }
+      if (sanitizedUpdates.hypnopaedicResonance !== undefined) {
+        sanitizedUpdates.hypnopaedicResonance = Math.min(1.0, Math.max(0.0, sanitizedUpdates.hypnopaedicResonance));
+      }
+      if (sanitizedUpdates.somaEquilibrium !== undefined) {
+        sanitizedUpdates.somaEquilibrium = Math.min(1.0, Math.max(0.0, sanitizedUpdates.somaEquilibrium));
+      }
+      if (sanitizedUpdates.autonomyLevel !== undefined) {
+        sanitizedUpdates.autonomyLevel = Math.min(1.0, Math.max(0.0, sanitizedUpdates.autonomyLevel));
+      }
+      if (sanitizedUpdates.loopIntervalMs !== undefined) {
+        sanitizedUpdates.loopIntervalMs = Math.max(500, Math.min(60000, sanitizedUpdates.loopIntervalMs));
+      }
+      return { ...prev, ...sanitizedUpdates };
+    });
   }, []);
 
-  // Rotates active node in the hexagonal loop
+  // Rotates active node safely in the hexagonal loop with bounds checking
   const getNextNode = useCallback((currentNode: NodeId): NodeId => {
     const currentIndex = NODE_ORDER.indexOf(currentNode);
-    const nextIndex = (currentIndex + 1) % NODE_ORDER.length;
+    const safeIndex = currentIndex === -1 ? 0 : currentIndex;
+    const nextIndex = (safeIndex + 1) % NODE_ORDER.length;
     return NODE_ORDER[nextIndex];
   }, []);
 
-  // Executes a single Singularity Loop step
+  // Executes a single Singularity Loop step with secure memory handling
   const runStep = useCallback(async () => {
     if (isProcessing) return;
     setIsProcessing(true);
@@ -101,7 +123,6 @@ export default function App() {
       const data = await response.json();
       const structured = data?.structured;
 
-      // Calculate deltas or fallback defaults
       const deltas = structured?.parameterAdjustments || {
         singularityIndexDelta: 1.5,
         entropyDelta: (Math.random() - 0.5) * 0.04,
@@ -112,11 +133,11 @@ export default function App() {
 
       setState((prev) => {
         const newStep = prev.step + 1;
-        const newSingularityIndex = Math.min(100, Math.max(0, prev.singularityIndex + (deltas.singularityIndexDelta || 1.0)));
-        const newEntropy = Math.min(1.0, Math.max(0.0, prev.entropyRate + (deltas.entropyDelta || 0)));
-        const newHypnopaedic = Math.min(1.0, Math.max(0.0, prev.hypnopaedicResonance + (deltas.hypnopaedicDelta || 0)));
-        const newSoma = Math.min(1.0, Math.max(0.0, prev.somaEquilibrium + (deltas.somaDelta || 0)));
-        const newAutonomy = Math.min(1.0, Math.max(0.0, prev.autonomyLevel + (deltas.autonomyDelta || 0)));
+        const newSingularityIndex = Math.min(100, Math.max(0, prev.singularityIndex + Number(deltas.singularityIndexDelta || 1.0)));
+        const newEntropy = Math.min(1.0, Math.max(0.0, prev.entropyRate + Number(deltas.entropyDelta || 0)));
+        const newHypnopaedic = Math.min(1.0, Math.max(0.0, prev.hypnopaedicResonance + Number(deltas.hypnopaedicDelta || 0)));
+        const newSoma = Math.min(1.0, Math.max(0.0, prev.somaEquilibrium + Number(deltas.somaDelta || 0)));
+        const newAutonomy = Math.min(1.0, Math.max(0.0, prev.autonomyLevel + Number(deltas.autonomyDelta || 0)));
 
         let newStatus: SingularityState['systemStatus'] = structured?.systemStatus || 'STABLE';
         if (newSingularityIndex > 85.0) {
@@ -125,19 +146,23 @@ export default function App() {
           newStatus = 'PARADOX_DETECTED';
         }
 
+        const rawThoughtSummary = typeof structured?.thoughtSummary === 'string' ? structured.thoughtSummary : '';
+        const rawLogEntry = typeof structured?.logEntry === 'string' ? structured.logEntry : '';
+        const rawText = typeof data?.rawText === 'string' ? data.rawText : '';
+
         const newLog: StepLogEntry = {
           id: `step-${newStep}-${Date.now()}`,
           step: newStep,
           timestamp: new Date().toISOString(),
           activeNode: nextNode,
-          thoughtSummary: structured?.thoughtSummary || `Processed loop step #${newStep} via node ${nextNode}`,
-          logEntry: structured?.logEntry || data?.rawText?.slice(0, 300) || `Loop tick ${newStep} executed successfully.`,
-          newFindings: structured?.newFindings,
+          thoughtSummary: rawThoughtSummary.slice(0, 500) || `Processed loop step #${newStep} via node ${nextNode}`,
+          logEntry: rawLogEntry.slice(0, 1000) || rawText.slice(0, 300) || `Loop tick ${newStep} executed successfully.`,
+          newFindings: typeof structured?.newFindings === 'string' ? structured.newFindings.slice(0, 1000) : undefined,
           parameterAdjustments: deltas,
-          modelUsed: data?.modelUsed || 'gemini-3.1-pro-preview'
+          modelUsed: typeof data?.modelUsed === 'string' ? data.modelUsed : 'gemini-3.1-pro-preview'
         };
 
-        setLogs((prevLogs) => [newLog, ...prevLogs]);
+        setLogs((prevLogs) => [newLog, ...prevLogs].slice(0, 500)); // Enforce bounded log history
 
         return {
           ...prev,
@@ -167,14 +192,17 @@ export default function App() {
     }
   }, [isProcessing, state, activePrompt, getNextNode]);
 
-  // High Thinking Lab handler
+  // High Thinking Lab handler with strict type validation
   const runThinkQuery = useCallback(async (query: string, systemContext?: string): Promise<DeepThinkingResult | null> => {
+    if (!query || typeof query !== 'string') {
+      throw new Error('Invalid query input parameter');
+    }
     setIsProcessing(true);
     try {
       const response = await fetch('/api/singularity-think', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: query, systemContext })
+        body: JSON.stringify({ prompt: query.slice(0, 5000), systemContext: systemContext?.slice(0, 5000) })
       });
 
       if (!response.ok) {
@@ -187,12 +215,15 @@ export default function App() {
       const resultObj: DeepThinkingResult = {
         query,
         systemContext,
-        text: data?.text,
-        thinkingProcess: data?.thinkingProcess,
+        text: typeof data?.text === 'string' ? data.text : '',
+        thinkingProcess: typeof data?.thinkingProcess === 'string' ? data.thinkingProcess : undefined,
         modelUsed: 'gemini-3.1-pro-preview',
         thinkingLevel: 'HIGH',
         timestamp: new Date().toLocaleTimeString()
       };
+
+      const safeQuerySlice = query.slice(0, 60);
+      const safeDataText = typeof data?.text === 'string' ? data.text.slice(0, 300) : '';
 
       setLogs((prev) => [
         {
@@ -200,14 +231,14 @@ export default function App() {
           step: state.step,
           timestamp: new Date().toISOString(),
           activeNode: 'thinking_core',
-          thoughtSummary: `High Thinking Lab query executed: "${query.slice(0, 60)}..."`,
-          logEntry: (data?.text || '').slice(0, 300) + '...',
+          thoughtSummary: `High Thinking Lab query executed: "${safeQuerySlice}..."`,
+          logEntry: safeDataText + '...',
           newFindings: 'Deep reasoning process generated comprehensive solution document.',
           modelUsed: 'gemini-3.1-pro-preview',
-          thinkingProcess: data?.thinkingProcess
+          thinkingProcess: typeof data?.thinkingProcess === 'string' ? data.thinkingProcess : undefined
         },
         ...prev
-      ]);
+      ].slice(0, 500));
 
       return resultObj;
     } catch (error: unknown) {
@@ -218,7 +249,7 @@ export default function App() {
     }
   }, [state.step]);
 
-  // Inject Paradox Distortion Spike
+  // Inject Paradox Distortion Spike safely
   const handleInjectParadox = useCallback(() => {
     setState((prev) => ({
       ...prev,
@@ -239,19 +270,29 @@ export default function App() {
         modelUsed: 'gemini-3.1-pro-preview'
       },
       ...prev
-    ]);
+    ].slice(0, 500));
   }, [state.step]);
 
   // Load Scenario Preset
   const handleLoadScenario = useCallback((scenario: ExperimentScenario) => {
+    if (!scenario || !scenario.initialState) return;
+    
     setState((prev) => ({
       ...prev,
       ...scenario.initialState,
+      singularityIndex: Math.min(100, Math.max(0, scenario.initialState.singularityIndex ?? prev.singularityIndex)),
+      entropyRate: Math.min(1.0, Math.max(0, scenario.initialState.entropyRate ?? prev.entropyRate)),
+      hypnopaedicResonance: Math.min(1.0, Math.max(0, scenario.initialState.hypnopaedicResonance ?? prev.hypnopaedicResonance)),
+      somaEquilibrium: Math.min(1.0, Math.max(0, scenario.initialState.somaEquilibrium ?? prev.somaEquilibrium)),
+      autonomyLevel: Math.min(1.0, Math.max(0, scenario.initialState.autonomyLevel ?? prev.autonomyLevel)),
       step: prev.step + 1,
       isAutoLooping: false
     }));
-    setActivePrompt(scenario.initialPrompt);
+    setActivePrompt(typeof scenario.initialPrompt === 'string' ? scenario.initialPrompt : '');
     setActiveTab('loop');
+
+    const safeTitle = typeof scenario.title === 'string' ? scenario.title : 'Unknown';
+    const safeContext = typeof scenario.systemContext === 'string' ? scenario.systemContext : '';
 
     setLogs((prev) => [
       {
@@ -259,20 +300,21 @@ export default function App() {
         step: state.step + 1,
         timestamp: new Date().toISOString(),
         activeNode: 'sensorium',
-        thoughtSummary: `Loaded Experiment Vector: "${scenario.title}"`,
-        logEntry: `[SCENARIO_LAUNCH] Context vector established: ${scenario.systemContext}`,
+        thoughtSummary: `Loaded Experiment Vector: "${safeTitle}"`,
+        logEntry: `[SCENARIO_LAUNCH] Context vector established: ${safeContext}`,
         modelUsed: 'gemini-3.1-pro-preview'
       },
       ...prev
-    ]);
+    ].slice(0, 500));
   }, [state.step]);
 
-  // Auto-Loop effect
+  // Auto-Loop effect with interval safety bounds
   useEffect(() => {
     if (state.isAutoLooping) {
+      const safeInterval = Math.max(500, Math.min(60000, state.loopIntervalMs));
       autoLoopTimerRef.current = setInterval(() => {
         runStep();
-      }, state.loopIntervalMs);
+      }, safeInterval);
     } else {
       if (autoLoopTimerRef.current) {
         clearInterval(autoLoopTimerRef.current);
