@@ -315,7 +315,7 @@ const setupServer = async (): Promise<void> => {
     app.use('*', async (req: Request, res: Response, next: NextFunction): Promise<void> => {
       try {
         const url = req.originalUrl;
-        if (url.startsWith('/api/')) {
+        if (typeof url === 'string' && url.startsWith('/api/')) {
           return next();
         }
         let template = await fs.promises.readFile(path.resolve(__dirname, 'index.html'), 'utf-8');
