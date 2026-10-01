@@ -34,12 +34,13 @@ export const Header: React.FC<HeaderProps> = memo(({
   onResetState,
   isProcessing
 }) => {
-  const handleSelectLoop = useCallback(() => setActiveTab('loop'), [setActiveTab]);
-  const handleSelectThinkingLab = useCallback(() => setActiveTab('thinking_lab'), [setActiveTab]);
-  const handleSelectScenarios = useCallback(() => setActiveTab('scenarios'), [setActiveTab]);
-  const handleSelectLogs = useCallback(() => setActiveTab('logs'), [setActiveTab]);
+  const handleSelectLoop = useCallback<() => void>(() => setActiveTab('loop'), [setActiveTab]);
+  const handleSelectThinkingLab = useCallback<() => void>(() => setActiveTab('thinking_lab'), [setActiveTab]);
+  const handleSelectScenarios = useCallback<() => void>(() => setActiveTab('scenarios'), [setActiveTab]);
+  const handleSelectLogs = useCallback<() => void>(() => setActiveTab('logs'), [setActiveTab]);
 
-  const clampedSingularityIndex = Math.min(100, Math.max(0, state.singularityIndex));
+  const rawSingularityIndex: number = typeof state.singularityIndex === 'number' && !isNaN(state.singularityIndex) ? state.singularityIndex : 0;
+  const clampedSingularityIndex: number = Math.min(100, Math.max(0, rawSingularityIndex));
 
   return (
     <header className="bg-slate-900/90 border-b border-cyan-900/40 backdrop-blur-md sticky top-0 z-50">
@@ -138,7 +139,7 @@ export const Header: React.FC<HeaderProps> = memo(({
             <div className="hidden lg:flex flex-col items-end pr-3 border-r border-slate-800">
               <div className="flex items-center space-x-1.5 text-xs font-mono text-slate-300">
                 <span className="text-slate-400">Singularity:</span>
-                <span className="font-bold text-cyan-400">{state.singularityIndex.toFixed(1)}%</span>
+                <span className="font-bold text-cyan-400">{rawSingularityIndex.toFixed(1)}%</span>
               </div>
               <div className="w-24 h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800 mt-1">
                 <div 
