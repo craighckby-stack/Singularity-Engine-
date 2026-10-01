@@ -15,7 +15,7 @@ import { LogStream } from './components/LogStream';
 import { PRESET_SCENARIOS } from './data/scenarios';
 import { Brain, Sparkles, Activity, ShieldCheck, Zap } from 'lucide-react';
 
-const NODE_ORDER: NodeId[] = [
+const NODE_ORDER: readonly NodeId[] = [
   'sensorium',
   'hypnopaedic',
   'thinking_core',
@@ -57,9 +57,9 @@ export default function App() {
   ]);
 
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const autoLoopTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoLoopTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Updates state fields
+  // Updates state fields safely
   const handleUpdateState = useCallback((updates: Partial<SingularityState>) => {
     setState((prev) => ({ ...prev, ...updates }));
   }, []);
@@ -99,7 +99,7 @@ export default function App() {
       }
 
       const data = await response.json();
-      const structured = data.structured;
+      const structured = data?.structured;
 
       // Calculate deltas or fallback defaults
       const deltas = structured?.parameterAdjustments || {
@@ -131,10 +131,10 @@ export default function App() {
           timestamp: new Date().toISOString(),
           activeNode: nextNode,
           thoughtSummary: structured?.thoughtSummary || `Processed loop step #${newStep} via node ${nextNode}`,
-          logEntry: structured?.logEntry || data.rawText?.slice(0, 300) || `Loop tick ${newStep} executed successfully.`,
+          logEntry: structured?.logEntry || data?.rawText?.slice(0, 300) || `Loop tick ${newStep} executed successfully.`,
           newFindings: structured?.newFindings,
           parameterAdjustments: deltas,
-          modelUsed: data.modelUsed || 'gemini-3.1-pro-preview'
+          modelUsed: data?.modelUsed || 'gemini-3.1-pro-preview'
         };
 
         setLogs((prevLogs) => [newLog, ...prevLogs]);
@@ -178,7 +178,7 @@ export default function App() {
       });
 
       if (!response.ok) {
-        const errData = await response.json();
+        const errData = await response.json().catch(() => ({}));
         throw new Error(errData.error || 'Failed to execute High Thinking mode');
       }
 
@@ -187,8 +187,8 @@ export default function App() {
       const resultObj: DeepThinkingResult = {
         query,
         systemContext,
-        text: data.text,
-        thinkingProcess: data.thinkingProcess,
+        text: data?.text,
+        thinkingProcess: data?.thinkingProcess,
         modelUsed: 'gemini-3.1-pro-preview',
         thinkingLevel: 'HIGH',
         timestamp: new Date().toLocaleTimeString()
@@ -201,10 +201,10 @@ export default function App() {
           timestamp: new Date().toISOString(),
           activeNode: 'thinking_core',
           thoughtSummary: `High Thinking Lab query executed: "${query.slice(0, 60)}..."`,
-          logEntry: data.text.slice(0, 300) + '...',
+          logEntry: (data?.text || '').slice(0, 300) + '...',
           newFindings: 'Deep reasoning process generated comprehensive solution document.',
           modelUsed: 'gemini-3.1-pro-preview',
-          thinkingProcess: data.thinkingProcess
+          thinkingProcess: data?.thinkingProcess
         },
         ...prev
       ]);
