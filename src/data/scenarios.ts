@@ -24,7 +24,7 @@ function validateState(state: ExperimentScenario['initialState']): ExperimentSce
   for (const [key, bounds] of Object.entries(STATE_BOUNDS)) {
     if (key === 'systemStatus') continue;
     const val = state[key as keyof typeof state] as number;
-    if (typeof val !== 'number' || isNaN(val) || val < bounds.min || val > bounds.max) {
+    if (typeof val !== 'number' || Number.isNaN(val) || !Number.isFinite(val) || val < bounds.min || val > bounds.max) {
       throw new Error(`Security validation failed: Field '${key}' value ${val} is out of bounds [${bounds.min}, ${bounds.max}]`);
     }
   }
