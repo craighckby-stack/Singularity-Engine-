@@ -173,17 +173,17 @@ export const TopologyDiagram: React.FC<TopologyDiagramProps> = ({ state, onSelec
             </g>
 
             {/* Render Nodes */}
-            {(Object.keys(NODES_DEFINITION) as NodeId[]).map((nodeId) => {
-              const node = NODES_DEFINITION[nodeId];
-              const pos = nodePositions[nodeId];
-              const isActive = state.activeNode === nodeId;
-              const isSelected = selectedNodeId === nodeId;
+            {(Object.keys(NODES_DEFINITION) as NodeId[]).map((nodeId: NodeId) => {
+              const node: Omit<SingularityNode, 'status' | 'throughputTokens'> = NODES_DEFINITION[nodeId];
+              const pos: { readonly x: number; readonly y: number } = nodePositions[nodeId];
+              const isActive: boolean = state.activeNode === nodeId;
+              const isSelected: boolean = selectedNodeId === nodeId;
 
               return (
                 <g 
                   key={nodeId} 
                   transform={`translate(${pos.x}, ${pos.y})`}
-                  onClick={() => handleNodeClick(nodeId)}
+                  onClick={(): void => handleNodeClick(nodeId)}
                   className="cursor-pointer group"
                 >
                   {/* Outer Pulsing Glow */}
