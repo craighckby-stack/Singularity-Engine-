@@ -69,7 +69,7 @@ const NODES_DEFINITION: Record<NodeId, Omit<SingularityNode, 'status' | 'through
 export const TopologyDiagram: React.FC<TopologyDiagramProps> = ({ state, onSelectNode }) => {
   const [selectedNodeId, setSelectedNodeId] = useState<NodeId>('thinking_core');
 
-  // Hexagonal node coordinates in SVG space (600x400)
+  // Hexagonal node coordinates in SVG space (600x400) with explicit type annotations
   const nodePositions: Record<NodeId, { readonly x: number; readonly y: number }> = {
     sensorium: { x: 120, y: 120 },
     hypnopaedic: { x: 300, y: 70 },
