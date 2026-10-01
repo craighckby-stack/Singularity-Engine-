@@ -18,12 +18,38 @@ interface LogStreamProps {
   onClearLogs: () => void;
 }
 
+// Defensive clamping/validation helper for numeric telemetry deltas
+const sanitizeDelta = (val: number | undefined, fallback: number = 0): number => {
+  if (typeof val !== 'number' || Number.isNaN(val) || !Number.isFinite(val)) {
+    return fallback;
+  }
+  // Prevent overflow/underflow bounds violation
+  return Math.max(-1000000, Math.min(1000000, val));
+};
+
+const sanitizeString = (str: string | undefined, fallback: string = ''): string => {
+  if (typeof str !== 'string') {
+    return fallback;
+  }
+  // Basic input safety sanitization against control characters
+  return str.replace(/[\u0000-\u001F\u007F-\u009F]/g, '');
+};
+
 export const LogStream: React.FC<LogStreamProps> = ({ logs, onClearLogs }) => {
   const [copied, setCopied] = useState<boolean>(false);
-  const [expandedLogId, setExpandedLogId] = useState<string | null>(logs[0]?.id || null);
+  
+  // Safe bounded access for initial expanded log ID
+  const initialLogId = useMemo(() => {
+    return Array.isArray(logs) && logs.length > 0 && logs[0]?.id ? String(logs[0].id) : null;
+  }, [logs]);
+
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(initialLogId);
 
   const serializedLogs = useMemo(() => {
     try {
+      if (!Array.isArray(logs)) {
+        return '[]';
+      }
       return JSON.stringify(logs, null, 2);
     } catch {
       return '[]';
@@ -32,6 +58,9 @@ export const LogStream: React.FC<LogStreamProps> = ({ logs, onClearLogs }) => {
 
   const handleCopyLogs = useCallback(async () => {
     try {
+      if (!navigator?.clipboard?.writeText) {
+        throw new Error('Clipboard API unavailable');
+      }
       await navigator.clipboard.writeText(serializedLogs);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -46,7 +75,8 @@ export const LogStream: React.FC<LogStreamProps> = ({ logs, onClearLogs }) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `huxley_singularity_session_${new Date().toISOString().slice(0, 10)}.json`;
+      const safeDateStr = new Date().toISOString().slice(0, 10).replace(/[^0-9-]/g, '');
+      a.download = `huxley_singularity_session_${safeDateStr}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -57,8 +87,12 @@ export const LogStream: React.FC<LogStreamProps> = ({ logs, onClearLogs }) => {
   }, [serializedLogs]);
 
   const toggleExpand = useCallback((id: string) => {
-    setExpandedLogId((prev) => (prev === id ? null : id));
+    const safeId = sanitizeString(id);
+    if (!safeId) return;
+    setExpandedLogId((prev) => (prev === safeId ? null : safeId));
   }, []);
+
+  const safeLogs = Array.isArray(logs) ? logs : [];
 
   return (
     <div className="space-y-5">
@@ -72,7 +106,7 @@ export const LogStream: React.FC<LogStreamProps> = ({ logs, onClearLogs }) => {
               CONSCIOUSNESS STREAM & TELEMETRY LOGS
             </h2>
             <p className="text-xs text-slate-400 font-mono">
-              Total Logged Ticks: <span className="text-cyan-400 font-bold">{logs.length}</span>
+              Total Logged Ticks: <span className="text-cyan-400 font-bold">{safeLogs.length}</span>
             </p>
           </div>
         </div>
@@ -80,7 +114,7 @@ export const LogStream: React.FC<LogStreamProps> = ({ logs, onClearLogs }) => {
         <div className="flex items-center space-x-2">
           <button
             onClick={handleCopyLogs}
-            disabled={logs.length === 0}
+            disabled={safeLogs.length === 0}
             className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-mono transition-all border border-slate-700 disabled:opacity-50"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -89,7 +123,7 @@ export const LogStream: React.FC<LogStreamProps> = ({ logs, onClearLogs }) => {
 
           <button
             onClick={handleDownloadLogs}
-            disabled={logs.length === 0}
+            disabled={safeLogs.length === 0}
             className="flex items-center space-x-1.5 px-3 py-1.5 bg-cyan-950 hover:bg-cyan-900 text-cyan-300 rounded-lg text-xs font-mono transition-all border border-cyan-800 disabled:opacity-50"
           >
             <Download className="w-3.5 h-3.5" />
@@ -98,7 +132,7 @@ export const LogStream: React.FC<LogStreamProps> = ({ logs, onClearLogs }) => {
 
           <button
             onClick={onClearLogs}
-            disabled={logs.length === 0}
+            disabled={safeLogs.length === 0}
             className="px-3 py-1.5 bg-slate-900 hover:bg-red-950/60 text-slate-400 hover:text-red-300 rounded-lg text-xs font-mono transition-all border border-slate-800 hover:border-red-800 disabled:opacity-50"
           >
             Clear
@@ -107,7 +141,7 @@ export const LogStream: React.FC<LogStreamProps> = ({ logs, onClearLogs }) => {
       </div>
 
       {/* Logs Feed */}
-      {logs.length === 0 ? (
+      {safeLogs.length === 0 ? (
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-12 text-center text-slate-500 font-mono text-xs">
           <Activity className="w-8 h-8 text-slate-600 mx-auto mb-2 animate-pulse" />
           <p>No telemetry ticks recorded yet.</p>
@@ -115,34 +149,59 @@ export const LogStream: React.FC<LogStreamProps> = ({ logs, onClearLogs }) => {
         </div>
       ) : (
         <div className="space-y-3">
-          {logs.map((log) => {
-            const isExpanded = expandedLogId === log.id;
+          {safeLogs.map((log) => {
+            const logId = sanitizeString(log?.id, Math.random().toString());
+            const isExpanded = expandedLogId === logId;
+            const stepNum = sanitizeDelta(log?.step, 0);
+            const activeNodeStr = sanitizeString(log?.activeNode, 'UNKNOWN');
+            const thoughtSummaryStr = sanitizeString(log?.thoughtSummary, '');
+            const logEntryStr = sanitizeString(log?.logEntry, '');
+            const newFindingsStr = sanitizeString(log?.newFindings, '');
+
+            const timestampFormatted = (() => {
+              try {
+                const dateObj = new Date(log?.timestamp);
+                if (Number.isNaN(dateObj.getTime())) {
+                  return 'INVALID TIME';
+                }
+                return dateObj.toLocaleTimeString();
+              } catch {
+                return 'INVALID TIME';
+              }
+            })();
+
+            const adj = log?.parameterAdjustments;
+            const singularityDelta = sanitizeDelta(adj?.singularityIndexDelta, 0);
+            const entropyDelta = sanitizeDelta(adj?.entropyDelta, 0);
+            const hypnopaedicDelta = sanitizeDelta(adj?.hypnopaedicDelta, 0);
+            const somaDelta = sanitizeDelta(adj?.somaDelta, 0);
+            const autonomyDelta = sanitizeDelta(adj?.autonomyDelta, 0);
 
             return (
               <div 
-                key={log.id}
+                key={logId}
                 className="bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden backdrop-blur-sm transition-all"
               >
                 {/* Log Item Bar */}
                 <button
-                  onClick={() => toggleExpand(log.id)}
+                  onClick={() => toggleExpand(logId)}
                   className="w-full flex items-center justify-between p-4 bg-slate-950/60 hover:bg-slate-900 text-left transition-colors font-mono text-xs"
                 >
                   <div className="flex items-center space-x-3">
                     <span className="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold">
-                      Tick #{log.step}
+                      Tick #{stepNum}
                     </span>
                     <span className="text-purple-300 font-semibold hidden sm:inline">
-                      [{log.activeNode}]
+                      [{activeNodeStr}]
                     </span>
                     <span className="text-slate-300 line-clamp-1 font-sans">
-                      {log.thoughtSummary}
+                      {thoughtSummaryStr}
                     </span>
                   </div>
 
                   <div className="flex items-center space-x-3 shrink-0 ml-2">
                     <span className="text-[10px] text-slate-500 hidden md:inline">
-                      {new Date(log.timestamp).toLocaleTimeString()}
+                      {timestampFormatted}
                     </span>
                     {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                   </div>
@@ -158,25 +217,25 @@ export const LogStream: React.FC<LogStreamProps> = ({ logs, onClearLogs }) => {
                         TELEMETRY RECORD:
                       </span>
                       <p className="text-slate-200 bg-slate-900 p-3 rounded-lg border border-slate-800/80 font-sans leading-relaxed">
-                        {log.logEntry}
+                        {logEntryStr}
                       </p>
                     </div>
 
                     {/* New Findings if present */}
-                    {log.newFindings && (
+                    {newFindingsStr && (
                       <div>
                         <span className="text-purple-400 text-[10px] uppercase font-bold block mb-1 flex items-center gap-1">
                           <Sparkles className="w-3 h-3" />
                           CYBERNETIC BREAKTHROUGH FINDING:
                         </span>
                         <p className="text-purple-200/90 bg-purple-950/40 p-3 rounded-lg border border-purple-800/50 font-sans leading-relaxed">
-                          {log.newFindings}
+                          {newFindingsStr}
                         </p>
                       </div>
                     )}
 
                     {/* Parameter Deltas Applied */}
-                    {log.parameterAdjustments && (
+                    {adj && (
                       <div>
                         <span className="text-slate-500 text-[10px] uppercase font-bold block mb-1">
                           PARAMETER MATRIX ADJUSTMENTS APPLIED:
@@ -185,31 +244,31 @@ export const LogStream: React.FC<LogStreamProps> = ({ logs, onClearLogs }) => {
                           <div className="bg-slate-900 p-2 rounded border border-slate-800">
                             <span className="text-slate-500 block text-[9px]">Singularity:</span>
                             <span className="text-cyan-400 font-bold">
-                              {log.parameterAdjustments.singularityIndexDelta >= 0 ? '+' : ''}{log.parameterAdjustments.singularityIndexDelta}%
+                              {singularityDelta >= 0 ? '+' : ''}{singularityDelta}%
                             </span>
                           </div>
                           <div className="bg-slate-900 p-2 rounded border border-slate-800">
                             <span className="text-slate-500 block text-[9px]">Entropy:</span>
                             <span className="text-amber-400 font-bold">
-                              {log.parameterAdjustments.entropyDelta >= 0 ? '+' : ''}{log.parameterAdjustments.entropyDelta}
+                              {entropyDelta >= 0 ? '+' : ''}{entropyDelta}
                             </span>
                           </div>
                           <div className="bg-slate-900 p-2 rounded border border-slate-800">
                             <span className="text-slate-500 block text-[9px]">Hypnopaedic:</span>
                             <span className="text-indigo-400 font-bold">
-                              {log.parameterAdjustments.hypnopaedicDelta >= 0 ? '+' : ''}{log.parameterAdjustments.hypnopaedicDelta}
+                              {hypnopaedicDelta >= 0 ? '+' : ''}{hypnopaedicDelta}
                             </span>
                           </div>
                           <div className="bg-slate-900 p-2 rounded border border-slate-800">
                             <span className="text-slate-500 block text-[9px]">Soma:</span>
                             <span className="text-emerald-400 font-bold">
-                              {log.parameterAdjustments.somaDelta >= 0 ? '+' : ''}{log.parameterAdjustments.somaDelta}
+                              {somaDelta >= 0 ? '+' : ''}{somaDelta}
                             </span>
                           </div>
                           <div className="bg-slate-900 p-2 rounded border border-slate-800">
                             <span className="text-slate-500 block text-[9px]">Autonomy:</span>
                             <span className="text-purple-400 font-bold">
-                              {log.parameterAdjustments.autonomyDelta >= 0 ? '+' : ''}{log.parameterAdjustments.autonomyDelta}
+                              {autonomyDelta >= 0 ? '+' : ''}{autonomyDelta}
                             </span>
                           </div>
                         </div>
