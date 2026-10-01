@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useTransition, useMemo } from 'react';
+import React, { useState, useCallback, useTransition, useMemo, FC, FormEvent } from 'react';
 import { 
   Sparkles, 
   BrainCircuit, 
@@ -34,12 +34,12 @@ const SAMPLE_QUERIES: readonly SampleQuery[] = [
   },
   {
     title: 'Recursive Agent Self-Correction Protocol',
-    query: 'Construct a multi-phase self-correcting feedback loop for autonomous AI agents that prevents semantic cognitive drift and hallucinations across 10,000 recursive execution cycles.',
+    query: 'Construct a multi-phase self-correcting feedback loop for autonomous AI agents that prevents semantic cognitive drift and hallucinations across recursive execution cycles.',
     context: 'Agent Architecture: Self-modifying prompt compiler with verification nodes.'
   },
   {
     title: 'Zero-Trust Global Resource Equilibrium',
-    query: 'Design an uncheatable cybernetic allocation matrix for energy, compute, and water resources across 100 sovereign regional nodes during a global climate singularity event.',
+    query: 'Design an uncheatable cybernetic allocation matrix for energy, compute, and water resources across sovereign regional nodes during a global climate singularity event.',
     context: 'Macro-Economic Control Matrix: Zero-trust cryptographic verification.'
   },
   {
@@ -49,16 +49,16 @@ const SAMPLE_QUERIES: readonly SampleQuery[] = [
   }
 ] as const;
 
-export const HighThinkingLab: React.FC<HighThinkingLabProps> = ({ onRunThinkQuery, isProcessing }) => {
-  const [query, setQuery] = useState<string>(SAMPLE_QUERIES[0].query);
-  const [systemContext, setSystemContext] = useState<string>(SAMPLE_QUERIES[0].context);
+export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isProcessing }) => {
+  const [query, setQuery] = useState<string>(SAMPLE_QUERIES[0]?.query ?? '');
+  const [systemContext, setSystemContext] = useState<string>(SAMPLE_QUERIES[0]?.context ?? '');
   const [result, setResult] = useState<DeepThinkingResult | null>(null);
   const [showThinkingProcess, setShowThinkingProcess] = useState<boolean>(true);
   const [copied, setCopied] = useState<boolean>(false);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+  const handleSubmit = useCallback(async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     if (!query.trim() || isProcessing) return;
 
@@ -68,7 +68,7 @@ export const HighThinkingLab: React.FC<HighThinkingLabProps> = ({ onRunThinkQuer
       if (res) {
         setResult(res);
       } else {
-        setErrorText('Failed to receive response from Gemini 3.1 Pro High Thinking API.');
+        setErrorText('Failed to receive response from Gemini High Thinking API.');
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Error executing High Thinking mode';
@@ -95,9 +95,9 @@ export const HighThinkingLab: React.FC<HighThinkingLabProps> = ({ onRunThinkQuer
     }
   }, [result]);
 
-  const sampleQueriesList = useMemo(() => SAMPLE_QUERIES.map((sample, idx) => (
+  const sampleQueriesList = useMemo(() => SAMPLE_QUERIES.map((sample) => (
     <button
-      key={idx}
+      key={sample.title}
       type="button"
       onClick={() => handleSelectSample(sample)}
       className="text-left p-3 rounded-lg bg-slate-950 hover:bg-purple-950/40 border border-slate-800 hover:border-purple-800/60 transition-all group"
@@ -127,7 +127,7 @@ export const HighThinkingLab: React.FC<HighThinkingLabProps> = ({ onRunThinkQuer
             <div>
               <div className="flex items-center space-x-2">
                 <h2 className="font-mono text-lg font-bold text-white tracking-wide">
-                  GEMINI 3.1 PRO HIGH THINKING LAB
+                  GEMINI HIGH THINKING LAB
                 </h2>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-purple-900 text-purple-200 border border-purple-600">
                   ThinkingLevel.HIGH
@@ -142,7 +142,7 @@ export const HighThinkingLab: React.FC<HighThinkingLabProps> = ({ onRunThinkQuer
           <div className="flex items-center space-x-2 text-xs font-mono bg-slate-950/80 px-3 py-1.5 rounded-xl border border-purple-800/40">
             <BrainCircuit className="w-4 h-4 text-purple-400" />
             <span className="text-slate-300">Model:</span>
-            <span className="text-purple-300 font-bold">gemini-3.1-pro-preview</span>
+            <span className="text-purple-300 font-bold">gemini-pro-preview</span>
           </div>
         </div>
       </div>
@@ -190,7 +190,7 @@ export const HighThinkingLab: React.FC<HighThinkingLabProps> = ({ onRunThinkQuer
         <div className="flex items-center justify-between pt-2">
           <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
-            <span>High Thinking Mode (`ThinkingLevel.HIGH`) • No max tokens restriction</span>
+            <span>High Thinking Mode (`ThinkingLevel.HIGH`) • Unconstrained generation</span>
           </div>
 
           <button
@@ -258,7 +258,7 @@ export const HighThinkingLab: React.FC<HighThinkingLabProps> = ({ onRunThinkQuer
               >
                 <div className="flex items-center space-x-2">
                   <BrainCircuit className="w-4 h-4 text-purple-400 animate-pulse" />
-                  <span>INTERNAL THINKING PROCESS (gemini-3.1-pro-preview)</span>
+                  <span>INTERNAL THINKING PROCESS</span>
                   <span className="px-2 py-0.2 bg-purple-950 text-purple-300 rounded text-[10px] font-mono border border-purple-700">
                     ThinkingLevel.HIGH
                   </span>
