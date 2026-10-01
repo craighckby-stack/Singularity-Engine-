@@ -21,13 +21,13 @@ export interface HighThinkingLabProps {
 }
 
 export interface SampleQuery {
-  title: string;
-  query: string;
-  context: string;
+  readonly title: string;
+  readonly query: string;
+  readonly context: string;
 }
 
-const MAX_QUERY_LENGTH = 10000;
-const MAX_CONTEXT_LENGTH = 2000;
+const MAX_QUERY_LENGTH: number = 10000;
+const MAX_CONTEXT_LENGTH: number = 2000;
 
 const SAMPLE_QUERIES: readonly SampleQuery[] = [
   {
@@ -62,14 +62,14 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
   const [, startTransition] = useTransition();
 
   const handleQueryChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>): void => {
-    const value = e.target.value;
+    const value: string = e.target.value;
     if (value.length <= MAX_QUERY_LENGTH) {
       setQuery(value);
     }
   }, []);
 
   const handleContextChange = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
-    const value = e.target.value;
+    const value: string = e.target.value;
     if (value.length <= MAX_CONTEXT_LENGTH) {
       setSystemContext(value);
     }
@@ -77,7 +77,7 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
 
   const handleSubmit = useCallback(async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-    const trimmedQuery = query.trim();
+    const trimmedQuery: string = query.trim();
     if (!trimmedQuery || isProcessing) return;
 
     if (trimmedQuery.length > MAX_QUERY_LENGTH) {
@@ -85,7 +85,7 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
       return;
     }
 
-    const trimmedContext = systemContext.trim();
+    const trimmedContext: string = systemContext.trim();
     if (trimmedContext.length > MAX_CONTEXT_LENGTH) {
       setErrorText(`System context exceeds maximum allowed length of ${MAX_CONTEXT_LENGTH} characters.`);
       return;
@@ -115,16 +115,16 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
   const handleCopyResult = useCallback(async (): Promise<void> => {
     if (!result) return;
     try {
-      const safeModel = typeof result.modelUsed === 'string' ? result.modelUsed.replace(/[^\w\s.-]/g, '') : 'unknown';
-      const safeTimestamp = typeof result.timestamp === 'string' ? result.timestamp.replace(/[^\w\s:-]/g, '') : 'unknown';
-      const safeQuery = typeof result.query === 'string' ? result.query : '';
-      const safeThinking = typeof result.thinkingProcess === 'string' ? result.thinkingProcess : 'N/A';
-      const safeText = typeof result.text === 'string' ? result.text : '';
+      const safeModel: string = typeof result.modelUsed === 'string' ? result.modelUsed.replace(/[^\w\s.-]/g, '') : 'unknown';
+      const safeTimestamp: string = typeof result.timestamp === 'string' ? result.timestamp.replace(/[^\w\s:-]/g, '') : 'unknown';
+      const safeQuery: string = typeof result.query === 'string' ? result.query : '';
+      const safeThinking: string = typeof result.thinkingProcess === 'string' ? result.thinkingProcess : 'N/A';
+      const safeText: string = typeof result.text === 'string' ? result.text : '';
 
       const textToCopy: string = `=== HUXLEY HIGH THINKING LAB REPORT ===\nModel: ${safeModel} [Thinking: HIGH]\nDate: ${safeTimestamp}\n\n[QUERY]\n${safeQuery}\n\n[THINKING TRACE]\n${safeThinking}\n\n[SYNTHESIZED SOLUTION]\n${safeText}`;
       await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout((): void => setCopied(false), 2000);
     } catch {
       setErrorText('Failed to copy report to clipboard.');
     }
