@@ -39,7 +39,7 @@ export const Header: React.FC<HeaderProps> = memo(({
   const handleSelectScenarios = useCallback<() => void>(() => setActiveTab('scenarios'), [setActiveTab]);
   const handleSelectLogs = useCallback<() => void>(() => setActiveTab('logs'), [setActiveTab]);
 
-  const rawSingularityIndex: number = typeof state.singularityIndex === 'number' && !isNaN(state.singularityIndex) ? state.singularityIndex : 0;
+  const rawSingularityIndex: number = typeof state.singularityIndex === 'number' && !isNaN(state.singularityIndex) && isFinite(state.singularityIndex) ? state.singularityIndex : 0;
   const clampedSingularityIndex: number = Math.min(100, Math.max(0, rawSingularityIndex));
 
   return (
