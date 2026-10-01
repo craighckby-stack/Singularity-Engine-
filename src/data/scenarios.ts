@@ -1,6 +1,6 @@
 import { ExperimentScenario } from '../types/singularity';
 
-export const PRESET_SCENARIOS: ExperimentScenario[] = [
+export const PRESET_SCENARIOS: readonly ExperimentScenario[] = [
   {
     id: 'soma-protocol',
     title: 'The Soma Protocol',
@@ -73,4 +73,4 @@ export const PRESET_SCENARIOS: ExperimentScenario[] = [
       systemStatus: 'PARADOX_DETECTED'
     }
   }
-];
+] as const;
