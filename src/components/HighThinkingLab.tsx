@@ -64,14 +64,14 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
 
     setErrorText(null);
     try {
-      const res = await onRunThinkQuery(query, systemContext);
+      const res: DeepThinkingResult | null = await onRunThinkQuery(query, systemContext);
       if (res) {
         setResult(res);
       } else {
         setErrorText('Failed to receive response from Gemini High Thinking API.');
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Error executing High Thinking mode';
+      const errorMessage: string = err instanceof Error ? err.message : 'Error executing High Thinking mode';
       setErrorText(errorMessage);
     }
   }, [query, systemContext, isProcessing, onRunThinkQuery]);
@@ -86,7 +86,7 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
   const handleCopyResult = useCallback(async (): Promise<void> => {
     if (!result) return;
     try {
-      const textToCopy = `=== HUXLEY HIGH THINKING LAB REPORT ===\nModel: ${result.modelUsed} [Thinking: HIGH]\nDate: ${result.timestamp}\n\n[QUERY]\n${result.query}\n\n[THINKING TRACE]\n${result.thinkingProcess || 'N/A'}\n\n[SYNTHESIZED SOLUTION]\n${result.text}`;
+      const textToCopy: string = `=== HUXLEY HIGH THINKING LAB REPORT ===\nModel: ${result.modelUsed} [Thinking: HIGH]\nDate: ${result.timestamp}\n\n[QUERY]\n${result.query}\n\n[THINKING TRACE]\n${result.thinkingProcess || 'N/A'}\n\n[SYNTHESIZED SOLUTION]\n${result.text}`;
       await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -95,11 +95,11 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
     }
   }, [result]);
 
-  const sampleQueriesList = useMemo((): ReactElement[] => SAMPLE_QUERIES.map((sample: SampleQuery) => (
+  const sampleQueriesList = useMemo((): ReactElement[] => SAMPLE_QUERIES.map((sample: SampleQuery): ReactElement => (
     <button
       key={sample.title}
       type="button"
-      onClick={() => handleSelectSample(sample)}
+      onClick={(): void => handleSelectSample(sample)}
       className="text-left p-3 rounded-lg bg-slate-950 hover:bg-purple-950/40 border border-slate-800 hover:border-purple-800/60 transition-all group"
     >
       <div className="flex items-center justify-between text-xs font-mono font-bold text-slate-200 group-hover:text-purple-300 mb-1">
@@ -167,7 +167,7 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
           </label>
           <textarea
             value={query}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setQuery(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>): void => setQuery(e.target.value)}
             rows={4}
             placeholder="Type your complex query or recursive paradox prompt here..."
             className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-purple-500 transition-colors leading-relaxed"
@@ -181,7 +181,7 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
           <input
             type="text"
             value={systemContext}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSystemContext(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>): void => setSystemContext(e.target.value)}
             placeholder="e.g. Huxley Matrix Directive 001: Preserve equilibrium while solving..."
             className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 font-mono focus:outline-none focus:border-purple-500"
           />
@@ -253,7 +253,7 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
             <div className="bg-purple-950/50 border border-purple-700/60 rounded-xl overflow-hidden shadow-inner">
               <button
                 type="button"
-                onClick={() => setShowThinkingProcess(!showThinkingProcess)}
+                onClick={(): void => setShowThinkingProcess(!showThinkingProcess)}
                 className="w-full flex items-center justify-between px-4 py-3 bg-purple-900/40 hover:bg-purple-900/60 text-purple-200 text-xs font-mono font-bold transition-all border-b border-purple-800/40"
               >
                 <div className="flex items-center space-x-2">
