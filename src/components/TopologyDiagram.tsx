@@ -86,7 +86,8 @@ export const TopologyDiagram: React.FC<TopologyDiagramProps> = ({ state, onSelec
     }
   };
 
-  const selectedNode: Omit<SingularityNode, 'status' | 'throughputTokens'> = NODES_DEFINITION[selectedNodeId];
+  const activeNodeKey: NodeId = state.activeNode && NODES_DEFINITION[state.activeNode] ? state.activeNode : 'sensorium';
+  const selectedNode: Omit<SingularityNode, 'status' | 'throughputTokens'> = NODES_DEFINITION[selectedNodeId] || NODES_DEFINITION['thinking_core'];
 
   return (
     <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 relative overflow-hidden backdrop-blur-sm">
@@ -109,7 +110,7 @@ export const TopologyDiagram: React.FC<TopologyDiagramProps> = ({ state, onSelec
             </span>
           </div>
           <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Active Node: <span className="text-cyan-300 font-semibold">{NODES_DEFINITION[state.activeNode].label}</span>
+            Active Node: <span className="text-cyan-300 font-semibold">{NODES_DEFINITION[activeNodeKey]?.label ?? 'Unknown'}</span>
           </p>
         </div>
 
@@ -155,12 +156,12 @@ export const TopologyDiagram: React.FC<TopologyDiagramProps> = ({ state, onSelec
             <path d="M 120 280 L 120 120" stroke="#334155" strokeWidth="2" strokeDasharray="4 4" />
 
             {/* Highlight Active Node Connection */}
-            {state.activeNode === 'sensorium' && <line x1="120" y1="120" x2="300" y2="70" stroke="#06b6d4" strokeWidth="3" filter="url(#glow)" className="animate-pulse" />}
-            {state.activeNode === 'hypnopaedic' && <line x1="300" y1="70" x2="480" y2="120" stroke="#6366f1" strokeWidth="3" filter="url(#glow)" className="animate-pulse" />}
-            {state.activeNode === 'thinking_core' && <line x1="480" y1="120" x2="480" y2="280" stroke="#a855f7" strokeWidth="3" filter="url(#glow)" className="animate-pulse" />}
-            {state.activeNode === 'synthesis' && <line x1="480" y1="280" x2="300" y2="330" stroke="#ec4899" strokeWidth="3" filter="url(#glow)" className="animate-pulse" />}
-            {state.activeNode === 'feedback' && <line x1="300" y1="330" x2="120" y2="280" stroke="#f59e0b" strokeWidth="3" filter="url(#glow)" className="animate-pulse" />}
-            {state.activeNode === 'mutation' && <line x1="120" y1="280" x2="120" y2="120" stroke="#10b981" strokeWidth="3" filter="url(#glow)" className="animate-pulse" />}
+            {activeNodeKey === 'sensorium' && <line x1="120" y1="120" x2="300" y2="70" stroke="#06b6d4" strokeWidth="3" filter="url(#glow)" className="animate-pulse" />}
+            {activeNodeKey === 'hypnopaedic' && <line x1="300" y1="70" x2="480" y2="120" stroke="#6366f1" strokeWidth="3" filter="url(#glow)" className="animate-pulse" />}
+            {activeNodeKey === 'thinking_core' && <line x1="480" y1="120" x2="480" y2="280" stroke="#a855f7" strokeWidth="3" filter="url(#glow)" className="animate-pulse" />}
+            {activeNodeKey === 'synthesis' && <line x1="480" y1="280" x2="300" y2="330" stroke="#ec4899" strokeWidth="3" filter="url(#glow)" className="animate-pulse" />}
+            {activeNodeKey === 'feedback' && <line x1="300" y1="330" x2="120" y2="280" stroke="#f59e0b" strokeWidth="3" filter="url(#glow)" className="animate-pulse" />}
+            {activeNodeKey === 'mutation' && <line x1="120" y1="280" x2="120" y2="120" stroke="#10b981" strokeWidth="3" filter="url(#glow)" className="animate-pulse" />}
 
             {/* Center Core Emblem */}
             <g transform="translate(300, 200)">
@@ -168,7 +169,7 @@ export const TopologyDiagram: React.FC<TopologyDiagramProps> = ({ state, onSelec
               <circle r="36" fill="none" stroke="#3b82f6" strokeWidth="1" strokeDasharray="6 3" className="animate-spin origin-center duration-10000" />
               <text textAnchor="middle" y="-6" fill="#94a3b8" fontSize="9" fontFamily="monospace" fontWeight="bold">SINGULARITY</text>
               <text textAnchor="middle" y="10" fill="#38bdf8" fontSize="13" fontFamily="monospace" fontWeight="bold">
-                {state.singularityIndex.toFixed(0)}%
+                {typeof state.singularityIndex === 'number' ? state.singularityIndex.toFixed(0) : '0'}%
               </text>
             </g>
 
@@ -176,7 +177,7 @@ export const TopologyDiagram: React.FC<TopologyDiagramProps> = ({ state, onSelec
             {(Object.keys(NODES_DEFINITION) as NodeId[]).map((nodeId: NodeId) => {
               const node: Omit<SingularityNode, 'status' | 'throughputTokens'> = NODES_DEFINITION[nodeId];
               const pos: { readonly x: number; readonly y: number } = nodePositions[nodeId];
-              const isActive: boolean = state.activeNode === nodeId;
+              const isActive: boolean = activeNodeKey === nodeId;
               const isSelected: boolean = selectedNodeId === nodeId;
 
               return (
@@ -248,7 +249,7 @@ export const TopologyDiagram: React.FC<TopologyDiagramProps> = ({ state, onSelec
         {/* Selected Node Details Drawer */}
         <div className="lg:col-span-4 bg-slate-950/90 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
           <div>
-            <div className="flex items-center space-x-2 border-b border-slate-800/80 pb-3 mb-3">
+            <div className="flex items-center space-x-2 border-b border-slate-800/85 pb-3 mb-3">
               <div 
                 className="w-3 h-3 rounded-full" 
                 style={{ backgroundColor: selectedNode.color }} 
@@ -283,8 +284,8 @@ export const TopologyDiagram: React.FC<TopologyDiagramProps> = ({ state, onSelec
             <div className="space-y-2 text-xs font-mono">
               <div className="flex justify-between py-1 border-b border-slate-900 text-slate-400">
                 <span>Node Status:</span>
-                <span className={state.activeNode === selectedNodeId ? 'text-emerald-400 font-bold' : 'text-slate-400'}>
-                  {state.activeNode === selectedNodeId ? 'ACTIVE PROCESSING' : 'STANDBY'}
+                <span className={activeNodeKey === selectedNodeId ? 'text-emerald-400 font-bold' : 'text-slate-400'}>
+                  {activeNodeKey === selectedNodeId ? 'ACTIVE PROCESSING' : 'STANDBY'}
                 </span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-900 text-slate-400">
@@ -296,10 +297,10 @@ export const TopologyDiagram: React.FC<TopologyDiagramProps> = ({ state, onSelec
               <div className="flex justify-between py-1 border-b border-slate-900 text-slate-400">
                 <span>Target Vector:</span>
                 <span className="text-cyan-400">
-                  {selectedNodeId === 'hypnopaedic' && `Soma: ${state.somaEquilibrium.toFixed(2)}`}
-                  {selectedNodeId === 'feedback' && `Entropy: ${state.entropyRate.toFixed(2)}`}
+                  {selectedNodeId === 'hypnopaedic' && `Soma: ${typeof state.somaEquilibrium === 'number' ? state.somaEquilibrium.toFixed(2) : '0.00'}`}
+                  {selectedNodeId === 'feedback' && `Entropy: ${typeof state.entropyRate === 'number' ? state.entropyRate.toFixed(2) : '0.00'}`}
                   {selectedNodeId === 'thinking_core' && 'Reasoning Trace Active'}
-                  {selectedNodeId === 'mutation' && `Autonomy: ${state.autonomyLevel.toFixed(2)}`}
+                  {selectedNodeId === 'mutation' && `Autonomy: ${typeof state.autonomyLevel === 'number' ? state.autonomyLevel.toFixed(2) : '0.00'}`}
                   {selectedNodeId === 'sensorium' && 'Telemetry Stream'}
                   {selectedNodeId === 'synthesis' && 'Delta Generation'}
                 </span>
