@@ -26,6 +26,9 @@ export interface SampleQuery {
   context: string;
 }
 
+const MAX_QUERY_LENGTH = 10000;
+const MAX_CONTEXT_LENGTH = 2000;
+
 const SAMPLE_QUERIES: readonly SampleQuery[] = [
   {
     title: 'The Huxleyan Singularity Paradox',
@@ -58,13 +61,39 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
   const [errorText, setErrorText] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
+  const handleQueryChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+    const value = e.target.value;
+    if (value.length <= MAX_QUERY_LENGTH) {
+      setQuery(value);
+    }
+  }, []);
+
+  const handleContextChange = useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
+    const value = e.target.value;
+    if (value.length <= MAX_CONTEXT_LENGTH) {
+      setSystemContext(value);
+    }
+  }, []);
+
   const handleSubmit = useCallback(async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-    if (!query.trim() || isProcessing) return;
+    const trimmedQuery = query.trim();
+    if (!trimmedQuery || isProcessing) return;
+
+    if (trimmedQuery.length > MAX_QUERY_LENGTH) {
+      setErrorText(`Query exceeds maximum allowed length of ${MAX_QUERY_LENGTH} characters.`);
+      return;
+    }
+
+    const trimmedContext = systemContext.trim();
+    if (trimmedContext.length > MAX_CONTEXT_LENGTH) {
+      setErrorText(`System context exceeds maximum allowed length of ${MAX_CONTEXT_LENGTH} characters.`);
+      return;
+    }
 
     setErrorText(null);
     try {
-      const res: DeepThinkingResult | null = await onRunThinkQuery(query, systemContext);
+      const res: DeepThinkingResult | null = await onRunThinkQuery(trimmedQuery, trimmedContext);
       if (res) {
         setResult(res);
       } else {
@@ -86,7 +115,13 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
   const handleCopyResult = useCallback(async (): Promise<void> => {
     if (!result) return;
     try {
-      const textToCopy: string = `=== HUXLEY HIGH THINKING LAB REPORT ===\nModel: ${result.modelUsed} [Thinking: HIGH]\nDate: ${result.timestamp}\n\n[QUERY]\n${result.query}\n\n[THINKING TRACE]\n${result.thinkingProcess || 'N/A'}\n\n[SYNTHESIZED SOLUTION]\n${result.text}`;
+      const safeModel = typeof result.modelUsed === 'string' ? result.modelUsed.replace(/[^\w\s.-]/g, '') : 'unknown';
+      const safeTimestamp = typeof result.timestamp === 'string' ? result.timestamp.replace(/[^\w\s:-]/g, '') : 'unknown';
+      const safeQuery = typeof result.query === 'string' ? result.query : '';
+      const safeThinking = typeof result.thinkingProcess === 'string' ? result.thinkingProcess : 'N/A';
+      const safeText = typeof result.text === 'string' ? result.text : '';
+
+      const textToCopy: string = `=== HUXLEY HIGH THINKING LAB REPORT ===\nModel: ${safeModel} [Thinking: HIGH]\nDate: ${safeTimestamp}\n\n[QUERY]\n${safeQuery}\n\n[THINKING TRACE]\n${safeThinking}\n\n[SYNTHESIZED SOLUTION]\n${safeText}`;
       await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -161,27 +196,39 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
       <form onSubmit={handleSubmit} className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 backdrop-blur-sm space-y-4">
         
         <div>
-          <label className="block text-xs font-mono font-bold text-purple-300 mb-1.5 flex items-center gap-1.5">
-            <Terminal className="w-3.5 h-3.5 text-purple-400" />
-            COMPLEX QUERY / PARADOX SPECIFICATION
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-mono font-bold text-purple-300 flex items-center gap-1.5">
+              <Terminal className="w-3.5 h-3.5 text-purple-400" />
+              COMPLEX QUERY / PARADOX SPECIFICATION
+            </label>
+            <span className="text-[10px] font-mono text-slate-500">
+              {query.length}/{MAX_QUERY_LENGTH}
+            </span>
+          </div>
           <textarea
             value={query}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>): void => setQuery(e.target.value)}
+            onChange={handleQueryChange}
             rows={4}
+            maxLength={MAX_QUERY_LENGTH}
             placeholder="Type your complex query or recursive paradox prompt here..."
             className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-purple-500 transition-colors leading-relaxed"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-mono text-slate-400 mb-1">
-            SYSTEM CONTEXT / HUXLEY RULES (OPTIONAL)
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-mono text-slate-400">
+              SYSTEM CONTEXT / HUXLEY RULES (OPTIONAL)
+            </label>
+            <span className="text-[10px] font-mono text-slate-500">
+              {systemContext.length}/{MAX_CONTEXT_LENGTH}
+            </span>
+          </div>
           <input
             type="text"
             value={systemContext}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>): void => setSystemContext(e.target.value)}
+            onChange={handleContextChange}
+            maxLength={MAX_CONTEXT_LENGTH}
             placeholder="e.g. Huxley Matrix Directive 001: Preserve equilibrium while solving..."
             className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 font-mono focus:outline-none focus:border-purple-500"
           />
