@@ -16,7 +16,7 @@ import {
   Activity
 } from 'lucide-react';
 
-interface TopologyDiagramProps {
+export interface TopologyDiagramProps {
   state: SingularityState;
   onSelectNode?: (nodeId: NodeId) => void;
 }
@@ -70,7 +70,7 @@ export const TopologyDiagram: React.FC<TopologyDiagramProps> = ({ state, onSelec
   const [selectedNodeId, setSelectedNodeId] = useState<NodeId>('thinking_core');
 
   // Hexagonal node coordinates in SVG space (600x400)
-  const nodePositions: Record<NodeId, { x: number; y: number }> = {
+  const nodePositions: Record<NodeId, { readonly x: number; readonly y: number }> = {
     sensorium: { x: 120, y: 120 },
     hypnopaedic: { x: 300, y: 70 },
     thinking_core: { x: 480, y: 120 },
@@ -79,14 +79,14 @@ export const TopologyDiagram: React.FC<TopologyDiagramProps> = ({ state, onSelec
     mutation: { x: 120, y: 280 }
   };
 
-  const handleNodeClick = (nodeId: NodeId) => {
+  const handleNodeClick = (nodeId: NodeId): void => {
     setSelectedNodeId(nodeId);
     if (onSelectNode) {
       onSelectNode(nodeId);
     }
   };
 
-  const selectedNode = NODES_DEFINITION[selectedNodeId];
+  const selectedNode: Omit<SingularityNode, 'status' | 'throughputTokens'> = NODES_DEFINITION[selectedNodeId];
 
   return (
     <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 relative overflow-hidden backdrop-blur-sm">
