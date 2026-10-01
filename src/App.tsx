@@ -60,25 +60,30 @@ export default function App() {
   const autoLoopTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Updates state fields
-  const handleUpdateState = (updates: Partial<SingularityState>) => {
+  const handleUpdateState = useCallback((updates: Partial<SingularityState>) => {
     setState((prev) => ({ ...prev, ...updates }));
-  };
+  }, []);
 
   // Rotates active node in the hexagonal loop
-  const getNextNode = (currentNode: NodeId): NodeId => {
+  const getNextNode = useCallback((currentNode: NodeId): NodeId => {
     const currentIndex = NODE_ORDER.indexOf(currentNode);
     const nextIndex = (currentIndex + 1) % NODE_ORDER.length;
     return NODE_ORDER[nextIndex];
-  };
+  }, []);
 
   // Executes a single Singularity Loop step
   const runStep = useCallback(async () => {
     if (isProcessing) return;
     setIsProcessing(true);
 
-    const nextNode = getNextNode(state.activeNode);
-
+    let nextNode: NodeId = 'thinking_core';
+    
     try {
+      setState((currentState) => {
+        nextNode = getNextNode(currentState.activeNode);
+        return currentState;
+      });
+
       const response = await fetch('/api/singularity-step', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -105,65 +110,65 @@ export default function App() {
         autonomyDelta: (Math.random() - 0.5) * 0.03
       };
 
-      const newStep = state.step + 1;
-      const newSingularityIndex = Math.min(100, Math.max(0, state.singularityIndex + (deltas.singularityIndexDelta || 1.0)));
-      const newEntropy = Math.min(1.0, Math.max(0.0, state.entropyRate + (deltas.entropyDelta || 0)));
-      const newHypnopaedic = Math.min(1.0, Math.max(0.0, state.hypnopaedicResonance + (deltas.hypnopaedicDelta || 0)));
-      const newSoma = Math.min(1.0, Math.max(0.0, state.somaEquilibrium + (deltas.somaDelta || 0)));
-      const newAutonomy = Math.min(1.0, Math.max(0.0, state.autonomyLevel + (deltas.autonomyDelta || 0)));
+      setState((prev) => {
+        const newStep = prev.step + 1;
+        const newSingularityIndex = Math.min(100, Math.max(0, prev.singularityIndex + (deltas.singularityIndexDelta || 1.0)));
+        const newEntropy = Math.min(1.0, Math.max(0.0, prev.entropyRate + (deltas.entropyDelta || 0)));
+        const newHypnopaedic = Math.min(1.0, Math.max(0.0, prev.hypnopaedicResonance + (deltas.hypnopaedicDelta || 0)));
+        const newSoma = Math.min(1.0, Math.max(0.0, prev.somaEquilibrium + (deltas.somaDelta || 0)));
+        const newAutonomy = Math.min(1.0, Math.max(0.0, prev.autonomyLevel + (deltas.autonomyDelta || 0)));
 
-      // Determine system status
-      let newStatus: SingularityState['systemStatus'] = structured?.systemStatus || 'STABLE';
-      if (newSingularityIndex > 85.0) {
-        newStatus = 'SINGULARITY_APPROACHING';
-      } else if (newEntropy > 0.75) {
-        newStatus = 'PARADOX_DETECTED';
-      }
+        let newStatus: SingularityState['systemStatus'] = structured?.systemStatus || 'STABLE';
+        if (newSingularityIndex > 85.0) {
+          newStatus = 'SINGULARITY_APPROACHING';
+        } else if (newEntropy > 0.75) {
+          newStatus = 'PARADOX_DETECTED';
+        }
 
-      // Update state
-      setState((prev) => ({
-        ...prev,
-        step: newStep,
-        singularityIndex: newSingularityIndex,
-        entropyRate: newEntropy,
-        hypnopaedicResonance: newHypnopaedic,
-        somaEquilibrium: newSoma,
-        autonomyLevel: newAutonomy,
-        activeNode: nextNode,
-        systemStatus: newStatus
-      }));
+        const newLog: StepLogEntry = {
+          id: `step-${newStep}-${Date.now()}`,
+          step: newStep,
+          timestamp: new Date().toISOString(),
+          activeNode: nextNode,
+          thoughtSummary: structured?.thoughtSummary || `Processed loop step #${newStep} via node ${nextNode}`,
+          logEntry: structured?.logEntry || data.rawText?.slice(0, 300) || `Loop tick ${newStep} executed successfully.`,
+          newFindings: structured?.newFindings,
+          parameterAdjustments: deltas,
+          modelUsed: data.modelUsed || 'gemini-3.1-pro-preview'
+        };
 
-      // Add log entry
-      const newLog: StepLogEntry = {
-        id: `step-${newStep}-${Date.now()}`,
-        step: newStep,
-        timestamp: new Date().toISOString(),
-        activeNode: nextNode,
-        thoughtSummary: structured?.thoughtSummary || `Processed loop step #${newStep} via node ${nextNode}`,
-        logEntry: structured?.logEntry || data.rawText?.slice(0, 300) || `Loop tick ${newStep} executed successfully.`,
-        newFindings: structured?.newFindings,
-        parameterAdjustments: deltas,
-        modelUsed: data.modelUsed || 'gemini-3.1-pro-preview'
-      };
+        setLogs((prevLogs) => [newLog, ...prevLogs]);
 
-      setLogs((prev) => [newLog, ...prev]);
-    } catch (error: any) {
+        return {
+          ...prev,
+          step: newStep,
+          singularityIndex: newSingularityIndex,
+          entropyRate: newEntropy,
+          hypnopaedicResonance: newHypnopaedic,
+          somaEquilibrium: newSoma,
+          autonomyLevel: newAutonomy,
+          activeNode: nextNode,
+          systemStatus: newStatus
+        };
+      });
+    } catch (error: unknown) {
       console.error('Error running step:', error);
-      // Fallback local iteration if server call fails
-      const fallbackStep = state.step + 1;
-      setState((prev) => ({
-        ...prev,
-        step: fallbackStep,
-        singularityIndex: Math.min(100, prev.singularityIndex + 0.8),
-        activeNode: nextNode
-      }));
+      setState((prev) => {
+        const fallbackStep = prev.step + 1;
+        return {
+          ...prev,
+          step: fallbackStep,
+          singularityIndex: Math.min(100, prev.singularityIndex + 0.8),
+          activeNode: nextNode
+        };
+      });
     } finally {
       setIsProcessing(false);
     }
-  }, [state, activePrompt, isProcessing]);
+  }, [isProcessing, state, activePrompt, getNextNode]);
 
   // High Thinking Lab handler
-  const runThinkQuery = async (query: string, systemContext?: string): Promise<DeepThinkingResult | null> => {
+  const runThinkQuery = useCallback(async (query: string, systemContext?: string): Promise<DeepThinkingResult | null> => {
     setIsProcessing(true);
     try {
       const response = await fetch('/api/singularity-think', {
@@ -189,31 +194,32 @@ export default function App() {
         timestamp: new Date().toLocaleTimeString()
       };
 
-      // Also log to consciousness stream
-      const newLog: StepLogEntry = {
-        id: `think-${Date.now()}`,
-        step: state.step,
-        timestamp: new Date().toISOString(),
-        activeNode: 'thinking_core',
-        thoughtSummary: `High Thinking Lab query executed: "${query.slice(0, 60)}..."`,
-        logEntry: data.text.slice(0, 300) + '...',
-        newFindings: 'Deep reasoning process generated comprehensive solution document.',
-        modelUsed: 'gemini-3.1-pro-preview',
-        thinkingProcess: data.thinkingProcess
-      };
+      setLogs((prev) => [
+        {
+          id: `think-${Date.now()}`,
+          step: state.step,
+          timestamp: new Date().toISOString(),
+          activeNode: 'thinking_core',
+          thoughtSummary: `High Thinking Lab query executed: "${query.slice(0, 60)}..."`,
+          logEntry: data.text.slice(0, 300) + '...',
+          newFindings: 'Deep reasoning process generated comprehensive solution document.',
+          modelUsed: 'gemini-3.1-pro-preview',
+          thinkingProcess: data.thinkingProcess
+        },
+        ...prev
+      ]);
 
-      setLogs((prev) => [newLog, ...prev]);
       return resultObj;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('High thinking error:', error);
       throw error;
     } finally {
       setIsProcessing(false);
     }
-  };
+  }, [state.step]);
 
   // Inject Paradox Distortion Spike
-  const handleInjectParadox = () => {
+  const handleInjectParadox = useCallback(() => {
     setState((prev) => ({
       ...prev,
       entropyRate: Math.min(1.0, prev.entropyRate + 0.35),
@@ -222,21 +228,22 @@ export default function App() {
       systemStatus: 'PARADOX_DETECTED'
     }));
 
-    const newLog: StepLogEntry = {
-      id: `paradox-${Date.now()}`,
-      step: state.step,
-      timestamp: new Date().toISOString(),
-      activeNode: 'feedback',
-      thoughtSummary: 'CRITICAL: Injecting high-entropy Paradox Distortion Wave!',
-      logEntry: '[PARADOX_SPIKE] Systemic paradox wave induced. Entropy rate spiked. Hypnopaedic filters strained.',
-      modelUsed: 'gemini-3.1-pro-preview'
-    };
-
-    setLogs((prev) => [newLog, ...prev]);
-  };
+    setLogs((prev) => [
+      {
+        id: `paradox-${Date.now()}`,
+        step: state.step,
+        timestamp: new Date().toISOString(),
+        activeNode: 'feedback',
+        thoughtSummary: 'CRITICAL: Injecting high-entropy Paradox Distortion Wave!',
+        logEntry: '[PARADOX_SPIKE] Systemic paradox wave induced. Entropy rate spiked. Hypnopaedic filters strained.',
+        modelUsed: 'gemini-3.1-pro-preview'
+      },
+      ...prev
+    ]);
+  }, [state.step]);
 
   // Load Scenario Preset
-  const handleLoadScenario = (scenario: ExperimentScenario) => {
+  const handleLoadScenario = useCallback((scenario: ExperimentScenario) => {
     setState((prev) => ({
       ...prev,
       ...scenario.initialState,
@@ -246,18 +253,19 @@ export default function App() {
     setActivePrompt(scenario.initialPrompt);
     setActiveTab('loop');
 
-    const newLog: StepLogEntry = {
-      id: `scenario-${Date.now()}`,
-      step: state.step + 1,
-      timestamp: new Date().toISOString(),
-      activeNode: 'sensorium',
-      thoughtSummary: `Loaded Experiment Vector: "${scenario.title}"`,
-      logEntry: `[SCENARIO_LAUNCH] Context vector established: ${scenario.systemContext}`,
-      modelUsed: 'gemini-3.1-pro-preview'
-    };
-
-    setLogs((prev) => [newLog, ...prev]);
-  };
+    setLogs((prev) => [
+      {
+        id: `scenario-${Date.now()}`,
+        step: state.step + 1,
+        timestamp: new Date().toISOString(),
+        activeNode: 'sensorium',
+        thoughtSummary: `Loaded Experiment Vector: "${scenario.title}"`,
+        logEntry: `[SCENARIO_LAUNCH] Context vector established: ${scenario.systemContext}`,
+        modelUsed: 'gemini-3.1-pro-preview'
+      },
+      ...prev
+    ]);
+  }, [state.step]);
 
   // Auto-Loop effect
   useEffect(() => {
@@ -268,18 +276,20 @@ export default function App() {
     } else {
       if (autoLoopTimerRef.current) {
         clearInterval(autoLoopTimerRef.current);
+        autoLoopTimerRef.current = null;
       }
     }
 
     return () => {
       if (autoLoopTimerRef.current) {
         clearInterval(autoLoopTimerRef.current);
+        autoLoopTimerRef.current = null;
       }
     };
   }, [state.isAutoLooping, state.loopIntervalMs, runStep]);
 
   // Reset State
-  const handleResetState = () => {
+  const handleResetState = useCallback(() => {
     setState({
       step: 1,
       singularityIndex: 42.0,
@@ -292,7 +302,15 @@ export default function App() {
       isAutoLooping: false,
       loopIntervalMs: 5000
     });
-  };
+  }, []);
+
+  const handleToggleAutoLoop = useCallback(() => {
+    setState((p) => ({ ...p, isAutoLooping: !p.isAutoLooping }));
+  }, []);
+
+  const handleClearLogs = useCallback(() => {
+    setLogs([]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-cyan-500 selection:text-black flex flex-col">
@@ -303,7 +321,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onRunStep={runStep}
-        onToggleAutoLoop={() => setState((p) => ({ ...p, isAutoLooping: !p.isAutoLooping }))}
+        onToggleAutoLoop={handleToggleAutoLoop}
         onResetState={handleResetState}
         isProcessing={isProcessing}
       />
@@ -347,7 +365,7 @@ export default function App() {
         {/* Tab 4: Consciousness Stream Logs */}
         {activeTab === 'logs' && (
           <div className="animate-fadeIn">
-            <LogStream logs={logs} onClearLogs={() => setLogs([])} />
+            <LogStream logs={logs} onClearLogs={handleClearLogs} />
           </div>
         )}
 
