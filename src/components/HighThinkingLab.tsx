@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useTransition, useMemo, FC, FormEvent } from 'react';
+import React, { useState, useCallback, useTransition, useMemo, FC, FormEvent, ReactElement } from 'react';
 import { 
   Sparkles, 
   BrainCircuit, 
@@ -15,12 +15,12 @@ import {
 } from 'lucide-react';
 import { DeepThinkingResult } from '../types/singularity';
 
-interface HighThinkingLabProps {
+export interface HighThinkingLabProps {
   onRunThinkQuery: (query: string, systemContext?: string) => Promise<DeepThinkingResult | null>;
   isProcessing: boolean;
 }
 
-interface SampleQuery {
+export interface SampleQuery {
   title: string;
   query: string;
   context: string;
@@ -95,7 +95,7 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
     }
   }, [result]);
 
-  const sampleQueriesList = useMemo(() => SAMPLE_QUERIES.map((sample) => (
+  const sampleQueriesList = useMemo((): ReactElement[] => SAMPLE_QUERIES.map((sample: SampleQuery) => (
     <button
       key={sample.title}
       type="button"
@@ -167,7 +167,7 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
           </label>
           <textarea
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setQuery(e.target.value)}
             rows={4}
             placeholder="Type your complex query or recursive paradox prompt here..."
             className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-xs text-slate-100 font-mono focus:outline-none focus:border-purple-500 transition-colors leading-relaxed"
@@ -181,7 +181,7 @@ export const HighThinkingLab: FC<HighThinkingLabProps> = ({ onRunThinkQuery, isP
           <input
             type="text"
             value={systemContext}
-            onChange={(e) => setSystemContext(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSystemContext(e.target.value)}
             placeholder="e.g. Huxley Matrix Directive 001: Preserve equilibrium while solving..."
             className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-xs text-slate-200 font-mono focus:outline-none focus:border-purple-500"
           />
