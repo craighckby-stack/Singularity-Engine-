@@ -61,7 +61,13 @@ app.get('/api/health', (_req: Request, res: Response): void => {
 // High Thinking Deep Reasoning Endpoint
 app.post('/api/singularity-think', async (req: Request<unknown, unknown, SingularityThinkRequest>, res: Response): Promise<void> => {
   try {
-    const { prompt, systemContext } = req.body || {};
+    const body = req.body;
+    if (!body || typeof body !== 'object') {
+      res.status(400).json({ error: 'Valid JSON body is required' });
+      return;
+    }
+
+    const { prompt, systemContext } = body;
     if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
       res.status(400).json({ error: 'Valid prompt string is required' });
       return;
@@ -93,7 +99,7 @@ app.post('/api/singularity-think', async (req: Request<unknown, unknown, Singula
 
         text = flashRes.text || '';
         const candidate = flashRes.candidates?.[0];
-        if (candidate?.content?.parts) {
+        if (candidate?.content?.parts && Array.isArray(candidate.content.parts)) {
           for (const part of candidate.content.parts) {
             if (part && typeof part === 'object' && 'thought' in part && typeof (part as { thought?: unknown }).thought === 'string') {
               thinkingProcess += (part as { thought: string }).thought + '\n';
@@ -115,7 +121,7 @@ app.post('/api/singularity-think', async (req: Request<unknown, unknown, Singula
           });
           text = proRes.text || '';
           const candidate = proRes.candidates?.[0];
-          if (candidate?.content?.parts) {
+          if (candidate?.content?.parts && Array.isArray(candidate.content.parts)) {
             for (const part of candidate.content.parts) {
               if (part && typeof part === 'object' && 'thought' in part && typeof (part as { thought?: unknown }).thought === 'string') {
                 thinkingProcess += (part as { thought: string }).thought + '\n';
@@ -157,15 +163,22 @@ app.post('/api/singularity-think', async (req: Request<unknown, unknown, Singula
 // Iterative Loop Step Endpoint
 app.post('/api/singularity-step', async (req: Request<unknown, unknown, SingularityStepRequest>, res: Response): Promise<void> => {
   try {
-    const { currentState, activePrompt } = req.body || {};
+    const body = req.body;
+    if (body && typeof body !== 'object') {
+      res.status(400).json({ error: 'Valid JSON body is required' });
+      return;
+    }
+
+    const currentState = body?.currentState;
+    const activePrompt = body?.activePrompt;
     const ai = getAIClient();
     
-    const stepNum: number = typeof currentState?.step === 'number' && !isNaN(currentState.step) ? Math.max(1, Math.floor(currentState.step)) : 1;
-    const singIndex: number = typeof currentState?.singularityIndex === 'number' && !isNaN(currentState.singularityIndex) ? Math.max(0, Math.min(100, currentState.singularityIndex)) : 42.0;
-    const entropy: number = typeof currentState?.entropyRate === 'number' && !isNaN(currentState.entropyRate) ? Math.max(0, Math.min(1, currentState.entropyRate)) : 0.35;
-    const hypno: number = typeof currentState?.hypnopaedicResonance === 'number' && !isNaN(currentState.hypnopaedicResonance) ? Math.max(0, Math.min(1, currentState.hypnopaedicResonance)) : 0.8;
-    const soma: number = typeof currentState?.somaEquilibrium === 'number' && !isNaN(currentState.somaEquilibrium) ? Math.max(0, Math.min(1, currentState.somaEquilibrium)) : 0.65;
-    const auto: number = typeof currentState?.autonomyLevel === 'number' && !isNaN(currentState.autonomyLevel) ? Math.max(0, Math.min(1, currentState.autonomyLevel)) : 0.5;
+    const stepNum: number = typeof currentState?.step === 'number' && !isNaN(currentState.step) && isFinite(currentState.step) ? Math.max(1, Math.floor(currentState.step)) : 1;
+    const singIndex: number = typeof currentState?.singularityIndex === 'number' && !isNaN(currentState.singularityIndex) && isFinite(currentState.singularityIndex) ? Math.max(0, Math.min(100, currentState.singularityIndex)) : 42.0;
+    const entropy: number = typeof currentState?.entropyRate === 'number' && !isNaN(currentState.entropyRate) && isFinite(currentState.entropyRate) ? Math.max(0, Math.min(1, currentState.entropyRate)) : 0.35;
+    const hypno: number = typeof currentState?.hypnopaedicResonance === 'number' && !isNaN(currentState.hypnopaedicResonance) && isFinite(currentState.hypnopaedicResonance) ? Math.max(0, Math.min(1, currentState.hypnopaedicResonance)) : 0.8;
+    const soma: number = typeof currentState?.somaEquilibrium === 'number' && !isNaN(currentState.somaEquilibrium) && isFinite(currentState.somaEquilibrium) ? Math.max(0, Math.min(1, currentState.somaEquilibrium)) : 0.65;
+    const auto: number = typeof currentState?.autonomyLevel === 'number' && !isNaN(currentState.autonomyLevel) && isFinite(currentState.autonomyLevel) ? Math.max(0, Math.min(1, currentState.autonomyLevel)) : 0.5;
     const sanitizedActivePrompt: string = typeof activePrompt === 'string' ? activePrompt.slice(0, 1000) : 'Optimize recursive loop stability while expanding cognitive intelligence horizons';
 
     const promptText = `
