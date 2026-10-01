@@ -36,16 +36,16 @@ const sanitizeString = (str: string | undefined, fallback: string = ''): string 
 };
 
 export const LogStream: React.FC<LogStreamProps> = ({ logs, onClearLogs }) => {
-  const [copied, setCopied] = useState<boolean>(false);
+  const [copied, setCopied]: [boolean, React.Dispatch<React.SetStateAction<boolean>>] = useState<boolean>(false);
   
   // Safe bounded access for initial expanded log ID
-  const initialLogId = useMemo(() => {
+  const initialLogId: string | null = useMemo(() => {
     return Array.isArray(logs) && logs.length > 0 && logs[0]?.id ? String(logs[0].id) : null;
   }, [logs]);
 
-  const [expandedLogId, setExpandedLogId] = useState<string | null>(initialLogId);
+  const [expandedLogId, setExpandedLogId]: [string | null, React.Dispatch<React.SetStateAction<string | null>>] = useState<string | null>(initialLogId);
 
-  const serializedLogs = useMemo(() => {
+  const serializedLogs: string = useMemo(() => {
     try {
       if (!Array.isArray(logs)) {
         return '[]';
