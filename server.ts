@@ -7,11 +7,11 @@ import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filename: string = fileURLToPath(import.meta.url);
+const __dirname: string = path.dirname(__filename);
 
 const app = express();
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '1mb' }));
 
 /**
  * Retrieves the Gemini API key from environment variables.
@@ -54,23 +54,26 @@ interface SingularityStepRequest {
 }
 
 // API Endpoints
-app.get('/api/health', (_req: Request, res: Response) => {
+app.get('/api/health', (_req: Request, res: Response): void => {
   res.json({ status: 'ok', time: new Date().toISOString(), hasApiKey: Boolean(getApiKey()) });
 });
 
 // High Thinking Deep Reasoning Endpoint
 app.post('/api/singularity-think', async (req: Request<unknown, unknown, SingularityThinkRequest>, res: Response): Promise<void> => {
   try {
-    const { prompt, systemContext } = req.body;
-    if (!prompt) {
-      res.status(400).json({ error: 'Prompt is required' });
+    const { prompt, systemContext } = req.body || {};
+    if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
+      res.status(400).json({ error: 'Valid prompt string is required' });
       return;
     }
 
+    const sanitizedPrompt = prompt.slice(0, 10000);
+    const sanitizedContext = typeof systemContext === 'string' ? systemContext.slice(0, 5000) : undefined;
+
     const ai = getAIClient();
-    const fullPrompt = systemContext 
-      ? `[SYSTEM DIRECTIVE / HUXLEY SINGULARITY ENGINE]\nYou are the Huxley Singularity Loop Engine running deep cybernetic reasoning.\nContext Matrix: ${systemContext}\n\n[USER QUERY / RECURSIVE PARADOX]\n${prompt}`
-      : prompt;
+    const fullPrompt = sanitizedContext 
+      ? `[SYSTEM DIRECTIVE / HUXLEY SINGULARITY ENGINE]\nYou are the Huxley Singularity Loop Engine running deep cybernetic reasoning.\nContext Matrix: ${sanitizedContext}\n\n[USER QUERY / RECURSIVE PARADOX]\n${sanitizedPrompt}`
+      : sanitizedPrompt;
 
     let text = '';
     let thinkingProcess = '';
@@ -129,7 +132,7 @@ app.post('/api/singularity-think', async (req: Request<unknown, unknown, Singula
     if (!text) {
       thinkingProcess = `[RECURSIVE THINKING ENGINE - HUXLEY MATRIX ANALYZER]\nStep 1: Deconstructing input query & context parameters.\nStep 2: Evaluating stability vs entropy vectors in feedback loop.\nStep 3: Resolving systemic paradoxes through multi-level hypnopaedic constraints.\nStep 4: Formulating non-dystopian equilibrium strategy.\nStep 5: Verifying zero-trust integrity metrics.`;
 
-      text = `=== HUXLEY SINGULARITY ANALYSIS REPORT ===\n\n1. Executive Synthesis:\nTo resolve "${prompt.slice(0, 80)}...", the cybernetic engine recommends a dynamically calibrated feedback loop. By balancing Soma equilibrium with controlled entropy mutation, systemic stability is maintained without restricting creative intelligence.\n\n2. Cybernetic Vector Adjustments:\n- Entropy Rate: Calibrated (not yet computed)\n- Hypnopaedic Resonance: Calibrated (not yet computed)\n- Soma Equilibrium: Calibrated (not yet computed)\n- Autonomy Index: Calibrated (not yet computed)\n\n3. Recursive Action Directives:\n- Deploy continuous self-verification subroutines across all feedback nodes.\n- Monitor for cognitive drift across execution cycles.\n- Integrate zero-trust cryptographic attestations for macro resource allocation.`;
+      text = `=== HUXLEY SINGULARITY ANALYSIS REPORT ===\n\n1. Executive Synthesis:\nTo resolve "${sanitizedPrompt.slice(0, 80)}...", the cybernetic engine recommends a dynamically calibrated feedback loop. By balancing Soma equilibrium with controlled entropy mutation, systemic stability is maintained without restricting creative intelligence.\n\n2. Cybernetic Vector Adjustments:\n- Entropy Rate: Calibrated (not yet computed)\n- Hypnopaedic Resonance: Calibrated (not yet computed)\n- Soma Equilibrium: Calibrated (not yet computed)\n- Autonomy Index: Calibrated (not yet computed)\n\n3. Recursive Action Directives:\n- Deploy continuous self-verification subroutines across all feedback nodes.\n- Monitor for cognitive drift across execution cycles.\n- Integrate zero-trust cryptographic attestations for macro resource allocation.`;
     }
 
     res.json({
@@ -154,15 +157,16 @@ app.post('/api/singularity-think', async (req: Request<unknown, unknown, Singula
 // Iterative Loop Step Endpoint
 app.post('/api/singularity-step', async (req: Request<unknown, unknown, SingularityStepRequest>, res: Response): Promise<void> => {
   try {
-    const { currentState, activePrompt } = req.body;
+    const { currentState, activePrompt } = req.body || {};
     const ai = getAIClient();
     
-    const stepNum = currentState?.step ?? 1;
-    const singIndex = currentState?.singularityIndex ?? 42.0;
-    const entropy = currentState?.entropyRate ?? 0.35;
-    const hypno = currentState?.hypnopaedicResonance ?? 0.8;
-    const soma = currentState?.somaEquilibrium ?? 0.65;
-    const auto = currentState?.autonomyLevel ?? 0.5;
+    const stepNum: number = typeof currentState?.step === 'number' ? Math.max(1, Math.floor(currentState.step)) : 1;
+    const singIndex: number = typeof currentState?.singularityIndex === 'number' ? Math.max(0, Math.min(100, currentState.singularityIndex)) : 42.0;
+    const entropy: number = typeof currentState?.entropyRate === 'number' ? Math.max(0, Math.min(1, currentState.entropyRate)) : 0.35;
+    const hypno: number = typeof currentState?.hypnopaedicResonance === 'number' ? Math.max(0, Math.min(1, currentState.hypnopaedicResonance)) : 0.8;
+    const soma: number = typeof currentState?.somaEquilibrium === 'number' ? Math.max(0, Math.min(1, currentState.somaEquilibrium)) : 0.65;
+    const auto: number = typeof currentState?.autonomyLevel === 'number' ? Math.max(0, Math.min(1, currentState.autonomyLevel)) : 0.5;
+    const sanitizedActivePrompt: string = typeof activePrompt === 'string' ? activePrompt.slice(0, 1000) : 'Optimize recursive loop stability while expanding cognitive intelligence horizons';
 
     const promptText = `
 You are the Huxley Singularity Loop Cybernetic Intelligence Engine executing step #${stepNum} of a recursive feedback loop.
@@ -174,7 +178,7 @@ Current Matrix State:
 - Hypnopaedic Resonance: ${hypno.toFixed(2)}
 - Soma Equilibrium: ${soma.toFixed(2)}
 - Autonomy Level: ${auto.toFixed(2)}
-- Active Core Directive: "${activePrompt || 'Optimize recursive loop stability while expanding cognitive intelligence horizons'}"
+- Active Core Directive: "${sanitizedActivePrompt}"
 
 Analyze the state, resolve any emergent cybernetic paradoxes, and issue telemetry updates for the next tick.
 
@@ -236,7 +240,7 @@ CRITICAL: Return your output as a valid JSON block enclosed in \`\`\`json ... \`
       const isParadox = entropy > 0.7;
 
       structured = {
-        thoughtSummary: `Evaluated step #${stepNum}. Loop stability recalibrated under directive "${(activePrompt || 'Default Directive').slice(0, 30)}..."`,
+        thoughtSummary: `Evaluated step #${stepNum}. Loop stability recalibrated under directive "${sanitizedActivePrompt.slice(0, 30)}..."`,
         logEntry: `[CYBERNETIC_TICK #${stepNum}] Hypnopaedic resonance balanced at ${hypno.toFixed(2)}. Entropy rate adjusted. Pro-Thinking core operating within nominal limits.`,
         newFindings: isParadox 
           ? 'Emergent paradox detected: High entropy causing non-deterministic feedback. Soma dampener engaged.'
@@ -285,8 +289,8 @@ CRITICAL: Return your output as a valid JSON block enclosed in \`\`\`json ... \`
 
 // Serve frontend with Vite in dev mode
 const setupServer = async (): Promise<void> => {
-  const isProd = process.env.NODE_ENV === 'production';
-  const PORT = process.env.PORT || 3000;
+  const isProd: boolean = process.env.NODE_ENV === 'production';
+  const PORT: string | number = process.env.PORT || 3000;
 
   if (!isProd) {
     const { createServer: createViteServer } = await import('vite');
@@ -311,7 +315,7 @@ const setupServer = async (): Promise<void> => {
     });
   } else {
     app.use(express.static(path.resolve(__dirname, 'dist')));
-    app.get('*', (_req: Request, res: Response) => {
+    app.get('*', (_req: Request, res: Response): void => {
       res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
     });
   }
