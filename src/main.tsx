@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import App from './App';
 import './index.css';
@@ -21,4 +22,8 @@ if (!rootElement) {
  */
 const appRoot: Root = createRoot(rootElement);
 
-appRoot.render(<App />);
+appRoot.render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);
