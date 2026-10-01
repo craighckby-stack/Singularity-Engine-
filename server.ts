@@ -160,12 +160,12 @@ app.post('/api/singularity-step', async (req: Request<unknown, unknown, Singular
     const { currentState, activePrompt } = req.body || {};
     const ai = getAIClient();
     
-    const stepNum: number = typeof currentState?.step === 'number' ? Math.max(1, Math.floor(currentState.step)) : 1;
-    const singIndex: number = typeof currentState?.singularityIndex === 'number' ? Math.max(0, Math.min(100, currentState.singularityIndex)) : 42.0;
-    const entropy: number = typeof currentState?.entropyRate === 'number' ? Math.max(0, Math.min(1, currentState.entropyRate)) : 0.35;
-    const hypno: number = typeof currentState?.hypnopaedicResonance === 'number' ? Math.max(0, Math.min(1, currentState.hypnopaedicResonance)) : 0.8;
-    const soma: number = typeof currentState?.somaEquilibrium === 'number' ? Math.max(0, Math.min(1, currentState.somaEquilibrium)) : 0.65;
-    const auto: number = typeof currentState?.autonomyLevel === 'number' ? Math.max(0, Math.min(1, currentState.autonomyLevel)) : 0.5;
+    const stepNum: number = typeof currentState?.step === 'number' && !isNaN(currentState.step) ? Math.max(1, Math.floor(currentState.step)) : 1;
+    const singIndex: number = typeof currentState?.singularityIndex === 'number' && !isNaN(currentState.singularityIndex) ? Math.max(0, Math.min(100, currentState.singularityIndex)) : 42.0;
+    const entropy: number = typeof currentState?.entropyRate === 'number' && !isNaN(currentState.entropyRate) ? Math.max(0, Math.min(1, currentState.entropyRate)) : 0.35;
+    const hypno: number = typeof currentState?.hypnopaedicResonance === 'number' && !isNaN(currentState.hypnopaedicResonance) ? Math.max(0, Math.min(1, currentState.hypnopaedicResonance)) : 0.8;
+    const soma: number = typeof currentState?.somaEquilibrium === 'number' && !isNaN(currentState.somaEquilibrium) ? Math.max(0, Math.min(1, currentState.somaEquilibrium)) : 0.65;
+    const auto: number = typeof currentState?.autonomyLevel === 'number' && !isNaN(currentState.autonomyLevel) ? Math.max(0, Math.min(1, currentState.autonomyLevel)) : 0.5;
     const sanitizedActivePrompt: string = typeof activePrompt === 'string' ? activePrompt.slice(0, 1000) : 'Optimize recursive loop stability while expanding cognitive intelligence horizons';
 
     const promptText = `
