@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 import { 
-  Activity, 
   BrainCircuit, 
   Cpu, 
   Zap, 
@@ -14,17 +13,19 @@ import {
 } from 'lucide-react';
 import { SingularityState } from '../types/singularity';
 
-interface HeaderProps {
+export type ActiveTabType = 'loop' | 'thinking_lab' | 'scenarios' | 'logs';
+
+export interface HeaderProps {
   state: SingularityState;
-  activeTab: 'loop' | 'thinking_lab' | 'scenarios' | 'logs';
-  setActiveTab: (tab: 'loop' | 'thinking_lab' | 'scenarios' | 'logs') => void;
+  activeTab: ActiveTabType;
+  setActiveTab: (tab: ActiveTabType) => void;
   onRunStep: () => void;
   onToggleAutoLoop: () => void;
   onResetState: () => void;
   isProcessing: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({
+export const Header: React.FC<HeaderProps> = memo(({
   state,
   activeTab,
   setActiveTab,
@@ -33,6 +34,13 @@ export const Header: React.FC<HeaderProps> = ({
   onResetState,
   isProcessing
 }) => {
+  const handleSelectLoop = useCallback(() => setActiveTab('loop'), [setActiveTab]);
+  const handleSelectThinkingLab = useCallback(() => setActiveTab('thinking_lab'), [setActiveTab]);
+  const handleSelectScenarios = useCallback(() => setActiveTab('scenarios'), [setActiveTab]);
+  const handleSelectLogs = useCallback(() => setActiveTab('logs'), [setActiveTab]);
+
+  const clampedSingularityIndex = Math.min(100, Math.max(0, state.singularityIndex));
+
   return (
     <header className="bg-slate-900/90 border-b border-cyan-900/40 backdrop-blur-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -75,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Navigation Tabs */}
           <nav className="hidden md:flex items-center space-x-1 bg-slate-950/60 p-1 rounded-xl border border-slate-800">
             <button
-              onClick={() => setActiveTab('loop')}
+              onClick={handleSelectLoop}
               className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-mono transition-all ${
                 activeTab === 'loop'
                   ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-lg shadow-cyan-900/30 font-semibold'
@@ -87,7 +95,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             <button
-              onClick={() => setActiveTab('thinking_lab')}
+              onClick={handleSelectThinkingLab}
               className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-mono transition-all ${
                 activeTab === 'thinking_lab'
                   ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-900/30 font-semibold'
@@ -99,7 +107,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             <button
-              onClick={() => setActiveTab('scenarios')}
+              onClick={handleSelectScenarios}
               className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-mono transition-all ${
                 activeTab === 'scenarios'
                   ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-900/30 font-semibold'
@@ -111,7 +119,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             <button
-              onClick={() => setActiveTab('logs')}
+              onClick={handleSelectLogs}
               className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-mono transition-all ${
                 activeTab === 'logs'
                   ? 'bg-slate-800 text-cyan-300 border border-cyan-800/50 font-semibold'
@@ -135,7 +143,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="w-24 h-1.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800 mt-1">
                 <div 
                   className="h-full bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-500 transition-all duration-500"
-                  style={{ width: `${Math.min(100, Math.max(0, state.singularityIndex))}%` }}
+                  style={{ width: `${clampedSingularityIndex}%` }}
                 />
               </div>
             </div>
@@ -180,7 +188,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Mobile Navigation Row */}
         <div className="flex md:hidden items-center justify-between py-2 border-t border-slate-800/80 text-xs font-mono overflow-x-auto space-x-2">
           <button
-            onClick={() => setActiveTab('loop')}
+            onClick={handleSelectLoop}
             className={`px-3 py-1 rounded-md whitespace-nowrap ${
               activeTab === 'loop' ? 'bg-cyan-900/60 text-cyan-300 border border-cyan-700' : 'text-slate-400'
             }`}
@@ -188,7 +196,7 @@ export const Header: React.FC<HeaderProps> = ({
             Topology
           </button>
           <button
-            onClick={() => setActiveTab('thinking_lab')}
+            onClick={handleSelectThinkingLab}
             className={`px-3 py-1 rounded-md whitespace-nowrap ${
               activeTab === 'thinking_lab' ? 'bg-purple-900/60 text-purple-300 border border-purple-700' : 'text-slate-400'
             }`}
@@ -196,7 +204,7 @@ export const Header: React.FC<HeaderProps> = ({
             High Thinking Lab
           </button>
           <button
-            onClick={() => setActiveTab('scenarios')}
+            onClick={handleSelectScenarios}
             className={`px-3 py-1 rounded-md whitespace-nowrap ${
               activeTab === 'scenarios' ? 'bg-indigo-900/60 text-indigo-300 border border-indigo-700' : 'text-slate-400'
             }`}
@@ -204,7 +212,7 @@ export const Header: React.FC<HeaderProps> = ({
             Experiments
           </button>
           <button
-            onClick={() => setActiveTab('logs')}
+            onClick={handleSelectLogs}
             className={`px-3 py-1 rounded-md whitespace-nowrap ${
               activeTab === 'logs' ? 'bg-slate-800 text-slate-200' : 'text-slate-400'
             }`}
@@ -216,4 +224,6 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
     </header>
   );
-};
+});
+
+Header.displayName = 'Header';
